@@ -16,8 +16,31 @@
   function empty(text){return `<div class="empty">${esc(text)}</div>`}
   function setMode(next){mode=next;$("#tab-login").classList.toggle("active",mode==="login");$("#tab-signup").classList.toggle("active",mode==="signup");$("#auth-submit").innerHTML=mode==="login"?'Iniciar sesión <span>→</span>':'Crear cuenta <span>→</span>';$("#password").autocomplete=mode==="login"?"current-password":"new-password";authMessage("")}
   async function authSubmit(e){e.preventDefault();if(!client){authMessage("Configura primero la URL y la clave pública en supabase.js.",true);return}const btn=$("#auth-submit");btn.disabled=true;const email=$("#email").value.trim(),password=$("#password").value;try{const res=mode==="login"?await client.auth.signInWithPassword({email,password}):await client.auth.signUp({email,password});if(res.error)throw res.error;if(mode==="signup"&&!res.data.session){authMessage("Cuenta creada. Revisa tu correo si se requiere confirmación.")}else if(res.data.user){user=res.data.user;await enterApp()}}catch(err){authMessage(err.message||"No se pudo completar la operación.",true)}finally{btn.disabled=false;setMode(mode)}}
-  async function enterApp(){if(!user)return;$("#auth-view").classList.add("hidden");$("#app-view")$("#logout-mobile").hidden = false;.classList.remove("hidden");$("#user-email").textContent=user.email||"Estudiante";$("#user-initials").textContent=(user.email||"E")[0].toUpperCase();$("#today-label").textContent=dateText(new Date());$("#connection-label").textContent="Sesión iniciada";await loadAll();render()}
-  async function signOut(){if(client)await client.auth.signOut();user=null;$("#app-view")$("#logout-mobile").hidden = true;.classList.add("hidden");$("#auth-view").classList.remove("hidden");$("#auth-form").reset();$("#connection-label").textContent="Sesión cerrada";authMessage("Has cerrado sesión.")}
+  async function enterApp() {   if (!user) return;    $("#auth-view").classList.add("hidden");   $("#app-view").classList.remove("hidden");    const logoutMobile = $("#logout-mobile");   if (logoutMobile) {     logoutMobile.hidden = false;   }    $("#user-email").textContent = user.email || "Estudiante";   $("#user-initials").textContent = (user.email || "E")[0].toUpperCase();   $("#today-label").textContent = dateText(new Date());   $("#connection-label").textContent = "Sesión iniciada";    await loadAll();   render(); }if(!user)return;$("#auth-view").classList.add("hidden");$("#app-view")$("#logout-mobile").hidden = false;.classList.remove("hidden");$("#user-email").textContent=user.email||"Estudiante";$("#user-initials").textContent=(user.email||"E")[0].toUpperCase();$("#today-label").textContent=dateText(new Date());$("#connection-label").textContent="Sesión iniciada";await loadAll();render()}
+  async function signOut() {
+  if (client) {
+    const { error } = await client.auth.signOut();
+
+    if (error) {
+      notice("No se pudo cerrar sesión: " + error.message, true);
+      return;
+    }
+  }
+
+  user = null;
+
+  $("#app-view").classList.add("hidden");
+  $("#auth-view").classList.remove("hidden");
+
+  const logoutMobile = $("#logout-mobile");
+  if (logoutMobile) {
+    logoutMobile.hidden = true;
+  }
+
+  $("#auth-form").reset();
+  $("#connection-label").textContent = "Sesión cerrada";
+  authMessage("Has cerrado sesión.");
+}
   async function fetchTable(table, order="created_at"){const {data,error}=await client.from(table).select("*").order(order,{ascending:false});if(error)throw error;return data||[]}
   async function loadAll(){try{[tasks,notes,schedule,grades]=await Promise.all([fetchTable("tasks"),fetchTable("notes"),fetchTable("schedule_items","starts_at"),fetchTable("grades")]);$("#notice").classList.add("hidden")}catch(err){notice("No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. "+(err.message||""),true)}}
   async function insert(table,values){const {error}=await client.from(table).insert({...values,user_id:user.id});if(error)throw error}
@@ -35,9 +58,52 @@
   async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return;const tables={"task-form":"tasks","note-form":"notes","schedule-form":"schedule_items","grade-form":"grades"},table=tables[f.id];if(!table)return;e.preventDefault();const values=Object.fromEntries(new FormData(f).entries());try{if(table==="tasks")values.completed=false;if(table==="grades"){values.score=Number(values.score);values.max_score=Number(values.max_score);if(values.score>values.max_score)throw Error("La nota obtenida no puede superar la nota máxima.")}if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
   async function clickHandler(e){const b=e.target.closest("button");if(!b)return;if(b.dataset.page||b.dataset.goto){activePage=b.dataset.page||b.dataset.goto;$("#notice").classList.add("hidden");render();return}const mappings=[["deleteTask","tasks"],["deleteNote","notes"],["deleteSchedule","schedule_items"],["deleteGrade","grades"]];for(const [key,table] of mappings)if(b.dataset[key]){try{await remove(table,b.dataset[key]);await reload("Elemento eliminado.")}catch(err){notice(err.message||"No se pudo eliminar.",true)}return}}
   async function changeHandler(e){const el=e.target;if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
-  async function init()$("#logout-button").addEventListener("click",signOut);$("#logout-mobile").addEventListener("click", signOut);{ $("#tab-login").addEventListener("click",()=>setMode("login"));$("#tab-signup").addEventListener("click",()=>setMode("signup"));$("#auth-form").addEventListener("submit",authSubmit);$("#logout-button").addEventListener("click",signOut);$("#page-content").addEventListener("submit",submitForm);document.addEventListener("click",clickHandler);$("#page-content").addEventListener("change",changeHandler);if(!configured()){$("#connection-label").textContent="Falta configurar Supabase";$("#auth-submit").disabled=true;authMessage("Primero configura la URL y la clave pública en supabase.js.",true);return}if(!window.supabase?.createClient){authMessage("No se pudo cargar Supabase. Revisa tu conexión a internet.",true);return}client=window.supabase.createClient(window.EDUNOVA_SUPABASE_URL,window.EDUNOVA_SUPABASE_ANON_KEY);$("#connection-label").textContent="Conexión preparada";const {data,error}=await client.auth.getSession();if(!error&&data.session?.user){user=data.session.user;await enterApp()}}
-const logoutMobile = $("#logout-mobile");
-if (logoutMobile) {
-  logoutMobile.addEventListener("click", signOut);
-}  document.addEventListener("DOMContentLoaded", init);
+ async function init() {
+  $("#tab-login").addEventListener("click", () => setMode("login"));
+  $("#tab-signup").addEventListener("click", () => setMode("signup"));
+  $("#auth-form").addEventListener("submit", authSubmit);
+  $("#logout-button").addEventListener("click", signOut);
+
+  const logoutMobile = $("#logout-mobile");
+  if (logoutMobile) {
+    logoutMobile.addEventListener("click", signOut);
+  }
+
+  $("#page-content").addEventListener("submit", submitForm);
+  document.addEventListener("click", clickHandler);
+  $("#page-content").addEventListener("change", changeHandler);
+
+  if (!configured()) {
+    $("#connection-label").textContent = "Falta configurar Supabase";
+    $("#auth-submit").disabled = true;
+    authMessage(
+      "Primero configura la URL y la clave pública en supabase.js.",
+      true
+    );
+    return;
+  }
+
+  if (!window.supabase?.createClient) {
+    authMessage(
+      "No se pudo cargar Supabase. Revisa tu conexión a internet.",
+      true
+    );
+    return;
+  }
+
+  client = window.supabase.createClient(
+    window.EDUNOVA_SUPABASE_URL,
+    window.EDUNOVA_SUPABASE_ANON_KEY
+  );
+
+  $("#connection-label").textContent = "Conexión preparada";
+
+  const { data, error } = await client.auth.getSession();
+
+  if (!error && data.session?.user) {
+    user = data.session.user;
+    await enterApp();
+  }
+}
+ document.addEventListener("DOMContentLoaded", init);
 })();
