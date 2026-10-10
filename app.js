@@ -3,7 +3,7 @@
   const $ = s => document.querySelector(s);
   let client = null, mode = "login", user = null, activePage = "dashboard";
   let tasks = [], notes = [], schedule = [], grades = [];
-  const configured = () => window.EDUNOVA_SUPABASE_URL && window.EDUNOVA_SUPABASE_ANON_KEY && !window.EDUNOVA_SUPABASE_URL.includes("https://kceaztgztmomdasrwrdw.supabase.co/rest/v1/") && !window.EDUNOVA_SUPABASE_ANON_KEY.includes("sb_publishable_0xSKHh-oeTR32Q2xH1mWIA_uSwxvhKX");
+  const configured = () => window.EDUNOVA_SUPABASE_URL && window.EDUNOVA_SUPABASE_ANON_KEY && !window.EDUNOVA_SUPABASE_URL.includes("https://kceaztgztmomdasrwrdw.supabase.co") && !window.EDUNOVA_SUPABASE_ANON_KEY.includes("sb_publishable_0xSKHh-oeTR32Q2xH1mWIA_uSwxvhKX");
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const dateText = d => new Date(d).toLocaleDateString("es-PE", {day:"2-digit",month:"short",year:"numeric"});
   function authMessage(text, error=false){const el=$("#auth-message");el.textContent=text;el.classList.toggle("error",error)}
