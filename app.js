@@ -2,7 +2,7 @@
   "use strict";
   const $ = s => document.querySelector(s);
   let client = null, mode = "login", user = null, activePage = "dashboard";
-  let tasks = [], notes = [], schedule = [], grades = [];
+  let tasks = [], notes = [], schedule = [], grades = [], studyGoals = [];
   const configured = () =>
   typeof window.EDUNOVA_SUPABASE_URL === "string" &&
   window.EDUNOVA_SUPABASE_URL.startsWith("https://") &&
