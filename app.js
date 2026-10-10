@@ -61,7 +61,27 @@ async function signOut() {
   authMessage("Has cerrado sesión.");
 }
   async function fetchTable(table, order="created_at"){const {data,error}=await client.from(table).select("*").order(order,{ascending:false});if(error)throw error;return data||[]}
-     async function loadAll() {   try {     [       tasks,       notes,       schedule,       grades,       studyGoals,       timetablePeriods,       timetableEntries     ] = await Promise.all([       fetchTable("tasks"),       fetchTable("notes"),       fetchTable("schedule_items", "starts_at"),       fetchTable("grades"),       fetchTable("study_goals"),       fetchTable("timetable_periods", "period_number"),       fetchTable("timetable_entries", "day_of_week")     ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } } {   try {     [       tasks,       notes,       schedule,       grades,       studyGoals,       timetablePeriods,       timetableEntries     ] = await Promise.all([       fetchTable("tasks"),       fetchTable("notes"),       fetchTable("schedule_items", "starts_at"),       fetchTable("grades"),       fetchTable("study_goals"),       fetchTable("timetable_periods", "period_number"),       fetchTable("timetable_entries", "day_of_week")     ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } } {   try {     [tasks, notes, schedule, grades, studyGoals] =       await Promise.all([         fetchTable("tasks"),         fetchTable("notes"),         fetchTable("schedule_items", "starts_at"),         fetchTable("grades"),         fetchTable("study_goals")       ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } }
+  async function loadAll() {
+    try {
+      [tasks, notes, schedule, grades, studyGoals, timetablePeriods, timetableEntries] =
+        await Promise.all([
+          fetchTable("tasks"),
+          fetchTable("notes"),
+          fetchTable("schedule_items", "starts_at"),
+          fetchTable("grades"),
+          fetchTable("study_goals"),
+          fetchTable("timetable_periods", "period_number"),
+          fetchTable("timetable_entries", "day_of_week")
+        ]);
+      $("#notice").classList.add("hidden");
+    } catch (err) {
+      notice(
+        "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +
+        (err.message || ""),
+        true
+      );
+    }
+  }
   async function insert(table,values){const {error}=await client.from(table).insert({...values,user_id:user.id});if(error)throw error}
   async function update(table,id,values){const {error}=await client.from(table).update(values).eq("id",id).eq("user_id",user.id);if(error)throw error}
   async function remove(table,id){const {error}=await client.from(table).delete().eq("id",id).eq("user_id",user.id);if(error)throw error}
