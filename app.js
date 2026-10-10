@@ -281,6 +281,16 @@ async function clickHandler(e) {
   const b = e.target.closest("button");
   if (!b) return;
 
+if (b.dataset.periodAdd !== undefined) {
+  await addTimetablePeriod();
+  return;
+}
+
+if (b.dataset.periodConfig !== undefined) {
+  await configureTimetablePeriod();
+  return;
+}
+
   if (b.dataset.page || b.dataset.goto) {
     activePage = b.dataset.page || b.dataset.goto;
     $("#notice").classList.add("hidden");
