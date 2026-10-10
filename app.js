@@ -2,7 +2,7 @@
   "use strict";
   const $ = s => document.querySelector(s);
   let client = null, mode = "login", user = null, activePage = "dashboard";
-  let tasks = [], notes = [], schedule = [], grades = [], studyGoals = [];
+  let tasks = [], notes = [], schedule = [], grades = [], studyGoals = []; let timetablePeriods = [], timetableEntries = [];
   const configured = () =>
   typeof window.EDUNOVA_SUPABASE_URL === "string" &&
   window.EDUNOVA_SUPABASE_URL.startsWith("https://") &&
@@ -61,7 +61,7 @@ async function signOut() {
   authMessage("Has cerrado sesión.");
 }
   async function fetchTable(table, order="created_at"){const {data,error}=await client.from(table).select("*").order(order,{ascending:false});if(error)throw error;return data||[]}
-   async function loadAll() {   try {     [tasks, notes, schedule, grades, studyGoals] =       await Promise.all([         fetchTable("tasks"),         fetchTable("notes"),         fetchTable("schedule_items", "starts_at"),         fetchTable("grades"),         fetchTable("study_goals")       ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } }
+     async function loadAll() {   try {     [       tasks,       notes,       schedule,       grades,       studyGoals,       timetablePeriods,       timetableEntries     ] = await Promise.all([       fetchTable("tasks"),       fetchTable("notes"),       fetchTable("schedule_items", "starts_at"),       fetchTable("grades"),       fetchTable("study_goals"),       fetchTable("timetable_periods", "period_number"),       fetchTable("timetable_entries", "day_of_week")     ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } } {   try {     [       tasks,       notes,       schedule,       grades,       studyGoals,       timetablePeriods,       timetableEntries     ] = await Promise.all([       fetchTable("tasks"),       fetchTable("notes"),       fetchTable("schedule_items", "starts_at"),       fetchTable("grades"),       fetchTable("study_goals"),       fetchTable("timetable_periods", "period_number"),       fetchTable("timetable_entries", "day_of_week")     ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } } {   try {     [tasks, notes, schedule, grades, studyGoals] =       await Promise.all([         fetchTable("tasks"),         fetchTable("notes"),         fetchTable("schedule_items", "starts_at"),         fetchTable("grades"),         fetchTable("study_goals")       ]);      $("#notice").classList.add("hidden");   } catch (err) {     notice(       "No se pudieron cargar los datos. Comprueba las tablas y las políticas RLS de Supabase. " +       (err.message || ""),       true     );   } }
   async function insert(table,values){const {error}=await client.from(table).insert({...values,user_id:user.id});if(error)throw error}
   async function update(table,id,values){const {error}=await client.from(table).update(values).eq("id",id).eq("user_id",user.id);if(error)throw error}
   async function remove(table,id){const {error}=await client.from(table).delete().eq("id",id).eq("user_id",user.id);if(error)throw error}
@@ -124,6 +124,73 @@ function studyGoalsPanel() {
   function tasksPage(){return `${panel("Agregar tarea","Registra el trabajo que necesitas hacer",`<form id="task-form"><div class="form-grid"><div class="full"><label for="task-title">Nombre de la tarea</label><input id="task-title" name="title" placeholder="Ej. Terminar el informe" maxlength="150" required></div><div><label for="task-subject">Curso</label><input id="task-subject" name="subject" placeholder="Ej. Ciencia y Tecnología" maxlength="100"></div><div><label for="task-due">Fecha límite</label><input id="task-due" name="due_date" type="date"></div><div class="full"><label for="task-priority">Prioridad</label><select id="task-priority" name="priority"><option>Normal</option><option>Alta</option><option>Baja</option></select></div></div><div class="form-actions"><button class="primary" type="submit">Guardar tarea +</button></div></form>`)}${panel("Lista de tareas",`${tasks.length} tarea(s) registrada(s)`,taskRows())}`}
   function notesPage(){const rows=notes.length?`<div class="list">${notes.map(n=>`<article class="row" style="align-items:flex-start"><div class="row-main"><b>${esc(n.title)}</b><small>${esc(n.subject||"Apunte general")} · ${dateText(n.created_at||new Date())}</small><p class="note-content">${esc(n.content||"")}</p></div><button class="small-button" data-delete-note="${esc(n.id)}">×</button></article>`).join("")}</div>`:empty("Todavía no has guardado apuntes.");return `${panel("Guardar apunte","Guarda ideas importantes para repasar",`<form id="note-form"><div class="form-grid"><div class="full"><label for="note-title">Título</label><input id="note-title" name="title" required maxlength="150" placeholder="Tema de clase"></div><div class="full"><label for="note-subject">Curso</label><input id="note-subject" name="subject" maxlength="100" placeholder="Curso o materia"></div><div class="full"><label for="note-content">Contenido</label><textarea id="note-content" name="content" rows="4" maxlength="12000" required placeholder="Escribe tu resumen…"></textarea></div></div><div class="form-actions"><button class="primary" type="submit">Guardar apunte +</button></div></form>`)}${panel("Mis apuntes",`${notes.length} apunte(s)`,rows)}`}
   function schedulePage(){const rows=[...schedule].sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||"")));const body=rows.length?`<div class="list">${rows.map(s=>`<div class="row"><div class="row-main"><b>${esc(s.title)}</b><small>${esc(s.starts_at?new Date(s.starts_at).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):"Sin fecha")} ${s.subject?"· "+esc(s.subject):""}</small></div><button class="small-button" data-delete-schedule="${esc(s.id)}">×</button></div>`).join("")}</div>`:empty("Agrega tus clases, exámenes o sesiones de estudio.");return `${panel("Añadir al horario","Organiza tus próximas actividades",`<form id="schedule-form"><div class="form-grid"><div class="full"><label for="schedule-title">Actividad</label><input id="schedule-title" name="title" required maxlength="150" placeholder="Ej. Repasar inglés"></div><div><label for="schedule-subject">Curso</label><input id="schedule-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="schedule-start">Fecha y hora</label><input id="schedule-start" name="starts_at" type="datetime-local" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar actividad +</button></div></form>`)}${panel("Próximas actividades",`${rows.length} actividad(es)`,body)}`}
+  
+function timetablePage() {
+  const days = [
+    { id: 1, name: "Lunes" },
+    { id: 2, name: "Martes" },
+    { id: 3, name: "Miércoles" },
+    { id: 4, name: "Jueves" },
+    { id: 5, name: "Viernes" }
+  ];
+
+  const periods = [...timetablePeriods].sort(
+    (a, b) => a.period_number - b.period_number
+  );
+
+  const entries = timetableEntries;
+
+  const cells = days.map(day => `
+    <section class="panel">
+      <h3>${day.name}</h3>
+      <div class="list">
+        ${periods.map(period => {
+          const entry = entries.find(e =>
+            Number(e.day_of_week) === day.id &&
+            Number(e.period_number) === Number(period.period_number)
+          );
+
+          return `
+            <div class="row" style="border-left:5px solid ${esc(entry?.color || "#DCEBFF")}">
+              <div class="row-main">
+                <b>${esc(entry?.subject || (period.is_break ? "RECREO" : "Sin asignar"))}</b>
+                <small>
+                  ${esc(String(period.start_time).slice(0, 5))}
+                  – ${esc(String(period.end_time).slice(0, 5))}
+                </small>
+                ${entry?.teacher
+                  ? `<small>${esc(entry.teacher)}</small>`
+                  : ""}
+              </div>
+              <button class="small-button"
+                data-timetable-edit="${day.id}:${period.period_number}">
+                Editar
+              </button>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  return `
+    ${panel(
+      "Mi horario escolar",
+      "Organiza tus clases de lunes a viernes",
+      `
+        <p>Períodos configurados: ${periods.length}</p>
+        <button class="primary" data-period-add>
+          + Añadir período
+        </button>
+        <button class="secondary" data-period-config>
+          Configurar horas
+        </button>
+      `
+    )}
+    ${cells}
+  `;
+}
+
   function gradesPage(){const rows=grades.length?`<div class="list">${grades.map(g=>`<div class="row"><div class="row-main"><b>${esc(g.title)}</b><small>${esc(g.subject||"Curso sin especificar")}</small></div><span class="grade-value">${esc(g.score)} / ${esc(g.max_score||20)}</span><button class="small-button" data-delete-grade="${esc(g.id)}">×</button></div>`).join("")}</div>`:empty("Registra tus notas para llevar un seguimiento.");return `${panel("Registrar calificación","Usa la escala que corresponda a tu colegio",`<form id="grade-form"><div class="form-grid"><div class="full"><label for="grade-title">Evaluación</label><input id="grade-title" name="title" required maxlength="150" placeholder="Ej. Práctica de unidad 1"></div><div><label for="grade-subject">Curso</label><input id="grade-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="grade-score">Nota obtenida</label><input id="grade-score" name="score" type="number" min="0" step="0.1" required placeholder="Ej. 17"></div><div class="full"><label for="grade-max">Nota máxima</label><input id="grade-max" name="max_score" type="number" min="0.1" step="0.1" value="20" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar nota +</button></div></form>`)}${panel("Mis calificaciones",`${grades.length} calificación(es)`,rows)}`}
   const info={dashboard:["¡Ohayoo :)!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."],goals: ["Mis", "objetivos", "Define tus metas semanales y sigue tu progreso."]};
   function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({dashboard,tasks:tasksPage,notes:notesPage,schedule:schedulePage,grades:gradesPage}[activePage]||dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
