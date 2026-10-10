@@ -592,3 +592,79 @@ textarea {
     transform: none;
   }
 }
+
+/* ===== EduNova V5: animaciones dinámicas ===== */
+
+@keyframes edunovaRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workspace-top {
+  animation: edunovaRise 0.45s ease-out both;
+}
+
+.stats .stat {
+  animation: edunovaRise 0.5s ease-out both;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.stats .stat:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.stats .stat:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.stats .stat:nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+.stats .stat:hover {
+  transform: translateY(-4px);
+  border-color: #6575a6;
+  box-shadow: 0 16px 35px #00000030;
+}
+
+.panel {
+  animation: edunovaRise 0.4s ease-out both;
+}
+
+.row {
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.row:hover {
+  border-color: #435779;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Accesibilidad: respetar movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-top,
+  .stats .stat,
+  .panel {
+    animation: none !important;
+  }
+
+  .stats .stat,
+  .row,
+  button {
+    transition: none !important;
+  }
+}
