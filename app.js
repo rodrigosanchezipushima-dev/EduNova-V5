@@ -126,10 +126,44 @@ function studyGoalsPanel() {
   function schedulePage(){const rows=[...schedule].sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||"")));const body=rows.length?`<div class="list">${rows.map(s=>`<div class="row"><div class="row-main"><b>${esc(s.title)}</b><small>${esc(s.starts_at?new Date(s.starts_at).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):"Sin fecha")} ${s.subject?"· "+esc(s.subject):""}</small></div><button class="small-button" data-delete-schedule="${esc(s.id)}">×</button></div>`).join("")}</div>`:empty("Agrega tus clases, exámenes o sesiones de estudio.");return `${panel("Añadir al horario","Organiza tus próximas actividades",`<form id="schedule-form"><div class="form-grid"><div class="full"><label for="schedule-title">Actividad</label><input id="schedule-title" name="title" required maxlength="150" placeholder="Ej. Repasar inglés"></div><div><label for="schedule-subject">Curso</label><input id="schedule-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="schedule-start">Fecha y hora</label><input id="schedule-start" name="starts_at" type="datetime-local" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar actividad +</button></div></form>`)}${panel("Próximas actividades",`${rows.length} actividad(es)`,body)}`}
   function gradesPage(){const rows=grades.length?`<div class="list">${grades.map(g=>`<div class="row"><div class="row-main"><b>${esc(g.title)}</b><small>${esc(g.subject||"Curso sin especificar")}</small></div><span class="grade-value">${esc(g.score)} / ${esc(g.max_score||20)}</span><button class="small-button" data-delete-grade="${esc(g.id)}">×</button></div>`).join("")}</div>`:empty("Registra tus notas para llevar un seguimiento.");return `${panel("Registrar calificación","Usa la escala que corresponda a tu colegio",`<form id="grade-form"><div class="form-grid"><div class="full"><label for="grade-title">Evaluación</label><input id="grade-title" name="title" required maxlength="150" placeholder="Ej. Práctica de unidad 1"></div><div><label for="grade-subject">Curso</label><input id="grade-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="grade-score">Nota obtenida</label><input id="grade-score" name="score" type="number" min="0" step="0.1" required placeholder="Ej. 17"></div><div class="full"><label for="grade-max">Nota máxima</label><input id="grade-max" name="max_score" type="number" min="0.1" step="0.1" value="20" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar nota +</button></div></form>`)}${panel("Mis calificaciones",`${grades.length} calificación(es)`,rows)}`}
   const info={dashboard:["¡Hola!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."]};
-  function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=({dashboard,tasks:tasksPage,notes:notesPage,schedule:schedulePage,grades:gradesPage}[activePage]||dashboard)();document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
+  function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({dashboard,tasks:tasksPage,notes:notesPage,schedule:schedulePage,grades:gradesPage}[activePage]||dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
   async function reload(msg){await loadAll();render();if(msg)notice(msg)}
-  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return;const tables={"task-form":"tasks","note-form":"notes","schedule-form":"schedule_items","grade-form":"grades"},table=tables[f.id];if(!table)return;e.preventDefault();const values=Object.fromEntries(new FormData(f).entries());try{if(table==="tasks")values.completed=false;if(table==="grades"){values.score=Number(values.score);values.max_score=Number(values.max_score);if(values.score>values.max_score)throw Error("La nota obtenida no puede superar la nota máxima.")}if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
+  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return; const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }if(table==="tasks")values.completed=false;if(table==="grades"){values.score=Number(values.score);values.max_score=Number(values.max_score);if(values.score>values.max_score)throw Error("La nota obtenida no puede superar la nota máxima.")}if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
   async function clickHandler(e){const b=e.target.closest("button");if(!b)return;if(b.dataset.page||b.dataset.goto){activePage=b.dataset.page||b.dataset.goto;$("#notice").classList.add("hidden");render();return}const mappings=[["deleteTask","tasks"],["deleteNote","notes"],["deleteSchedule","schedule_items"],["deleteGrade","grades"]];for(const [key,table] of mappings)if(b.dataset[key]){try{await remove(table,b.dataset[key]);await reload("Elemento eliminado.")}catch(err){notice(err.message||"No se pudo eliminar.",true)}return}}
+
+if (b.dataset.goalAdd) {
+  const goal = studyGoals.find(g => String(g.id) === b.dataset.goalAdd);
+  if (!goal) return;
+
+  const completed = Number(goal.completed) || 0;
+  const target = Number(goal.target) || 1;
+
+  if (completed >= target) {
+    notice("¡Ya alcanzaste esta meta!");
+    return;
+  }
+
+  try {
+    await update("study_goals", goal.id, {
+      completed: completed + 1
+    });
+    await reload("¡Progreso actualizado!");
+  } catch (err) {
+    notice(err.message || "No se pudo actualizar la meta.", true);
+  }
+  return;
+}
+
+if (b.dataset.goalDelete) {
+  try {
+    await remove("study_goals", b.dataset.goalDelete);
+    await reload("Objetivo eliminado.");
+  } catch (err) {
+    notice(err.message || "No se pudo eliminar el objetivo.", true);
+  }
+  return;
+}
+
   async function changeHandler(e){const el=e.target;if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
  async function init() {
   $("#tab-login").addEventListener("click", () => setMode("login"));
