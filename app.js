@@ -205,6 +205,96 @@ async function configureTimetablePeriod() {
   }
 }
 
+async function editTimetableEntry(day, periodNumber) {
+  const period = timetablePeriods.find(
+    p => Number(p.period_number) === Number(periodNumber)
+  );
+
+  if (!period) {
+    notice("Primero configura ese período.", true);
+    return;
+  }
+
+  const existing = timetableEntries.find(
+    e =>
+      Number(e.day_of_week) === Number(day) &&
+      Number(e.period_number) === Number(periodNumber)
+  );
+
+  const subject = prompt(
+    "Nombre de la asignatura (vacío para borrar):",
+    existing?.subject || ""
+  );
+
+  if (subject === null) return;
+
+  const days = {
+    1: "Lunes",
+    2: "Martes",
+    3: "Miércoles",
+    4: "Jueves",
+    5: "Viernes"
+  };
+
+  if (!subject.trim()) {
+    if (existing) {
+      try {
+        await remove("timetable_entries", existing.id);
+        await reload("Casilla vaciada.");
+      } catch (err) {
+        notice(err.message || "No se pudo borrar la casilla.", true);
+      }
+    }
+    return;
+  }
+
+  const teacher = prompt(
+    "Nombre del profesor:",
+    existing?.teacher || ""
+  );
+  if (teacher === null) return;
+
+  const room = prompt(
+    "Aula (opcional):",
+    existing?.room || ""
+  );
+  if (room === null) return;
+
+  const color = prompt(
+    "Color hexadecimal (ej. #DCEBFF):",
+    existing?.color || "#DCEBFF"
+  );
+  if (color === null) return;
+
+  if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    notice("El color debe tener formato hexadecimal, como #DCEBFF.", true);
+    return;
+  }
+
+  const values = {
+    day_of_week: Number(day),
+    period_number: Number(periodNumber),
+    subject: subject.trim(),
+    teacher: teacher.trim(),
+    room: room.trim(),
+    color
+  };
+
+  try {
+    if (existing) {
+      await update("timetable_entries", existing.id, values);
+    } else {
+      await insert("timetable_entries", values);
+    }
+
+    await reload(
+      `${days[day]}: ${subject.trim()} guardado correctamente.`
+    );
+  } catch (err) {
+    notice(err.message || "No se pudo guardar la clase.", true);
+  }
+}
+
 function timetablePage() {
   const days = [
     { id: 1, name: "Lunes" },
