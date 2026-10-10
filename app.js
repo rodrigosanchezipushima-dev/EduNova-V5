@@ -125,6 +125,86 @@ function studyGoalsPanel() {
   function notesPage(){const rows=notes.length?`<div class="list">${notes.map(n=>`<article class="row" style="align-items:flex-start"><div class="row-main"><b>${esc(n.title)}</b><small>${esc(n.subject||"Apunte general")} · ${dateText(n.created_at||new Date())}</small><p class="note-content">${esc(n.content||"")}</p></div><button class="small-button" data-delete-note="${esc(n.id)}">×</button></article>`).join("")}</div>`:empty("Todavía no has guardado apuntes.");return `${panel("Guardar apunte","Guarda ideas importantes para repasar",`<form id="note-form"><div class="form-grid"><div class="full"><label for="note-title">Título</label><input id="note-title" name="title" required maxlength="150" placeholder="Tema de clase"></div><div class="full"><label for="note-subject">Curso</label><input id="note-subject" name="subject" maxlength="100" placeholder="Curso o materia"></div><div class="full"><label for="note-content">Contenido</label><textarea id="note-content" name="content" rows="4" maxlength="12000" required placeholder="Escribe tu resumen…"></textarea></div></div><div class="form-actions"><button class="primary" type="submit">Guardar apunte +</button></div></form>`)}${panel("Mis apuntes",`${notes.length} apunte(s)`,rows)}`}
   function schedulePage(){const rows=[...schedule].sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||"")));const body=rows.length?`<div class="list">${rows.map(s=>`<div class="row"><div class="row-main"><b>${esc(s.title)}</b><small>${esc(s.starts_at?new Date(s.starts_at).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):"Sin fecha")} ${s.subject?"· "+esc(s.subject):""}</small></div><button class="small-button" data-delete-schedule="${esc(s.id)}">×</button></div>`).join("")}</div>`:empty("Agrega tus clases, exámenes o sesiones de estudio.");return `${panel("Añadir al horario","Organiza tus próximas actividades",`<form id="schedule-form"><div class="form-grid"><div class="full"><label for="schedule-title">Actividad</label><input id="schedule-title" name="title" required maxlength="150" placeholder="Ej. Repasar inglés"></div><div><label for="schedule-subject">Curso</label><input id="schedule-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="schedule-start">Fecha y hora</label><input id="schedule-start" name="starts_at" type="datetime-local" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar actividad +</button></div></form>`)}${panel("Próximas actividades",`${rows.length} actividad(es)`,body)}`}
   
+async function addTimetablePeriod() {
+  const number = timetablePeriods.length + 1;
+
+  if (number > 20) {
+    notice("Puedes configurar hasta 20 períodos.", true);
+    return;
+  }
+
+  const start = prompt("Hora de inicio (HH:MM):", "08:00");
+  if (start === null) return;
+
+  const end = prompt("Hora de fin (HH:MM):", "08:45");
+  if (end === null) return;
+
+  const validTime = value =>
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+  if (!validTime(start) || !validTime(end) || start >= end) {
+    notice("Introduce horas válidas. La hora final debe ser posterior.", true);
+    return;
+  }
+
+  try {
+    await insert("timetable_periods", {
+      period_number: number,
+      start_time: start,
+      end_time: end
+    });
+    await reload("Período añadido correctamente.");
+  } catch (err) {
+    notice(err.message || "No se pudo añadir el período.", true);
+  }
+}
+
+async function configureTimetablePeriod() {
+  if (!timetablePeriods.length) {
+    notice("Primero añade un período.", true);
+    return;
+  }
+
+  const number = prompt(
+    "¿Qué número de período deseas editar?",
+    String(timetablePeriods[0].period_number)
+  );
+  if (number === null) return;
+
+  const period = timetablePeriods.find(
+    p => Number(p.period_number) === Number(number)
+  );
+
+  if (!period) {
+    notice("No se encontró ese período.", true);
+    return;
+  }
+
+  const start = prompt("Nueva hora de inicio (HH:MM):", String(period.start_time).slice(0, 5));
+  if (start === null) return;
+
+  const end = prompt("Nueva hora de fin (HH:MM):", String(period.end_time).slice(0, 5));
+  if (end === null) return;
+
+  const validTime = value =>
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+  if (!validTime(start) || !validTime(end) || start >= end) {
+    notice("Introduce horas válidas. La hora final debe ser posterior.", true);
+    return;
+  }
+
+  try {
+    await update("timetable_periods", period.id, {
+      start_time: start,
+      end_time: end
+    });
+    await reload("Horario actualizado.");
+  } catch (err) {
+    notice(err.message || "No se pudo actualizar el período.", true);
+  }
+}
+
 function timetablePage() {
   const days = [
     { id: 1, name: "Lunes" },
