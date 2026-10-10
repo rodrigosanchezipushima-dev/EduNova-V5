@@ -16,8 +16,27 @@
   function empty(text){return `<div class="empty">${esc(text)}</div>`}
   function setMode(next){mode=next;$("#tab-login").classList.toggle("active",mode==="login");$("#tab-signup").classList.toggle("active",mode==="signup");$("#auth-submit").innerHTML=mode==="login"?'Iniciar sesión <span>→</span>':'Crear cuenta <span>→</span>';$("#password").autocomplete=mode==="login"?"current-password":"new-password";authMessage("")}
   async function authSubmit(e){e.preventDefault();if(!client){authMessage("Configura primero la URL y la clave pública en supabase.js.",true);return}const btn=$("#auth-submit");btn.disabled=true;const email=$("#email").value.trim(),password=$("#password").value;try{const res=mode==="login"?await client.auth.signInWithPassword({email,password}):await client.auth.signUp({email,password});if(res.error)throw res.error;if(mode==="signup"&&!res.data.session){authMessage("Cuenta creada. Revisa tu correo si se requiere confirmación.")}else if(res.data.user){user=res.data.user;await enterApp()}}catch(err){authMessage(err.message||"No se pudo completar la operación.",true)}finally{btn.disabled=false;setMode(mode)}}
-  async function enterApp() {   if (!user) return;    $("#auth-view").classList.add("hidden");   $("#app-view").classList.remove("hidden");    const logoutMobile = $("#logout-mobile");   if (logoutMobile) {     logoutMobile.hidden = false;   }    $("#user-email").textContent = user.email || "Estudiante";   $("#user-initials").textContent = (user.email || "E")[0].toUpperCase();   $("#today-label").textContent = dateText(new Date());   $("#connection-label").textContent = "Sesión iniciada";    await loadAll();   render(); }if(!user)return;$("#auth-view").classList.add("hidden");$("#app-view")$("#logout-mobile").hidden = false;.classList.remove("hidden");$("#user-email").textContent=user.email||"Estudiante";$("#user-initials").textContent=(user.email||"E")[0].toUpperCase();$("#today-label").textContent=dateText(new Date());$("#connection-label").textContent="Sesión iniciada";await loadAll();render()}
-  async function signOut() {
+
+async function enterApp() {
+  if (!user) return;
+
+  $("#auth-view").classList.add("hidden");
+  $("#app-view").classList.remove("hidden");
+
+  const logoutMobile = $("#logout-mobile");
+  if (logoutMobile) {
+    logoutMobile.hidden = false;
+  }
+
+  $("#user-email").textContent = user.email || "Estudiante";
+  $("#user-initials").textContent = (user.email || "E")[0].toUpperCase();
+  $("#today-label").textContent = dateText(new Date());
+  $("#connection-label").textContent = "Sesión iniciada";
+
+  await loadAll();
+  render();
+}
+async function signOut() {
   if (client) {
     const { error } = await client.auth.signOut();
 
