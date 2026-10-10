@@ -66,7 +66,106 @@ async function signOut() {
   async function update(table,id,values){const {error}=await client.from(table).update(values).eq("id",id).eq("user_id",user.id);if(error)throw error}
   async function remove(table,id){const {error}=await client.from(table).delete().eq("id",id).eq("user_id",user.id);if(error)throw error}
   function taskRows(limit=Infinity){const list=[...tasks].sort((a,b)=>Number(a.completed)-Number(b.completed)).slice(0,limit);if(!list.length)return empty("Todavía no tienes tareas. ¡Agrega la primera!");return `<div class="list">${list.map(t=>`<div class="row ${t.completed?"completed":""}"><input class="check" type="checkbox" data-complete="${esc(t.id)}" ${t.completed?"checked":""} aria-label="Completar tarea"><div class="row-main"><b>${esc(t.title)}</b><small>${esc(t.due_date?`Fecha: ${t.due_date}`:(t.subject||"Sin curso"))}</small></div><span class="pill">${t.completed?"Completada":esc(t.priority||"Normal")}</span><button class="small-button" data-delete-task="${esc(t.id)}" aria-label="Eliminar">×</button></div>`).join("")}</div>`}
-  function dashboard(){const pending=tasks.filter(t=>!t.completed).length,done=tasks.filter(t=>t.completed).length,avg=grades.length?(grades.reduce((s,g)=>s+Number(g.score||0),0)/grades.length).toFixed(1):"—";return `<div class="stats"><div class="stat"><small>Tareas pendientes</small><strong>${pending}</strong><span class="hint">Un paso a la vez</span></div><div class="stat"><small>Tareas completadas</small><strong>${done}</strong><span class="hint">¡Sigue así!</span></div><div class="stat"><small>Promedio registrado</small><strong>${avg}</strong><span class="hint">${grades.length} calificación(es)</span></div></div>${panel("Tus tareas","Lo que tienes por avanzar",taskRows(5),'<button class="secondary" data-goto="tasks">Ver tareas →</button>')}${panel("Tus apuntes","Material para repasar",notes.length?`<div class="list">${notes.slice(0,3).map(n=>`<div class="row"><div class="row-main"><b>${esc(n.title)}</b><small>${esc(n.subject||"Apunte general")}</small></div><span class="pill">Apunte</span></div>`).join("")}</div>`:empty("Tus apuntes aparecerán aquí."),'<button class="secondary" data-goto="notes">Ver apuntes →</button>')}`}
+
+function dashboard() {
+  const pending = tasks.filter(t => !t.completed).length;
+  const done = tasks.filter(t => t.completed).length;
+
+  const avg = grades.length
+    ? (grades.reduce((s, g) => s + Number(g.score || 0), 0) / grades.length).toFixed(1)
+    : "—";
+
+  const upcoming = [...schedule]
+    .filter(s => s.starts_at && new Date(s.starts_at) >= new Date())
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+    .slice(0, 3);
+
+  const upcomingBody = upcoming.length
+    ? `<div class="list">${upcoming.map(s => `
+        <div class="row">
+          <div class="row-main">
+            <b>${esc(s.title)}</b>
+            <small>${esc(new Date(s.starts_at).toLocaleString("es-PE", {
+              dateStyle: "medium",
+              timeStyle: "short"
+            }))}</small>
+          </div>
+          <span class="pill">${esc(s.subject || "Actividad")}</span>
+        </div>
+      `).join("")}</div>`
+    : empty("No tienes actividades próximas registradas.");
+
+  return `
+    <div class="stats">
+      <div class="stat">
+        <small>Tareas pendientes</small>
+        <strong>${pending}</strong>
+        <span class="hint">Por completar</span>
+      </div>
+      <div class="stat">
+        <small>Tareas completadas</small>
+        <strong>${done}</strong>
+        <span class="hint">¡Buen trabajo!</span>
+      </div>
+      <div class="stat">
+        <small>Promedio registrado</small>
+        <strong>${avg}</strong>
+        <span class="hint">${grades.length} calificación(es)</span>
+      </div>
+      <div class="stat">
+        <small>Apuntes guardados</small>
+        <strong>${notes.length}</strong>
+        <span class="hint">Material de estudio</span>
+      </div>
+    </div>
+
+    ${panel(
+      "Accesos rápidos",
+      "Continúa con tus actividades",
+      `<div class="form-actions">
+        <button class="primary" data-goto="tasks">Mis tareas →</button>
+        <button class="secondary" data-goto="notes">Mis apuntes →</button>
+        <button class="secondary" data-goto="schedule">Mi horario →</button>
+        <button class="secondary" data-goto="grades">Mis notas →</button>
+      </div>`
+    )}
+
+    ${panel(
+      "Tus tareas",
+      "Lo que tienes por avanzar",
+      taskRows(5),
+      '<button class="secondary" data-goto="tasks">Ver todas →</button>'
+    )}
+
+    ${panel(
+      "Próximas actividades",
+      "Tus siguientes clases y sesiones",
+      upcomingBody,
+      '<button class="secondary" data-goto="schedule">Ver horario →</button>'
+    )}
+
+    ${panel(
+      "Tus apuntes recientes",
+      "Material para repasar",
+      notes.length
+        ? `<div class="list">${[...notes]
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+            .slice(0, 3)
+            .map(n => `
+              <div class="row">
+                <div class="row-main">
+                  <b>${esc(n.title)}</b>
+                  <small>${esc(n.subject || "Apunte general")}</small>
+                </div>
+                <span class="pill">Apunte</span>
+              </div>
+            `).join("")}</div>`
+        : empty("Tus apuntes aparecerán aquí."),
+      '<button class="secondary" data-goto="notes">Ver apuntes →</button>'
+    )}
+  `;
+}
+
   function tasksPage(){return `${panel("Agregar tarea","Registra el trabajo que necesitas hacer",`<form id="task-form"><div class="form-grid"><div class="full"><label for="task-title">Nombre de la tarea</label><input id="task-title" name="title" placeholder="Ej. Terminar el informe" maxlength="150" required></div><div><label for="task-subject">Curso</label><input id="task-subject" name="subject" placeholder="Ej. Ciencia y Tecnología" maxlength="100"></div><div><label for="task-due">Fecha límite</label><input id="task-due" name="due_date" type="date"></div><div class="full"><label for="task-priority">Prioridad</label><select id="task-priority" name="priority"><option>Normal</option><option>Alta</option><option>Baja</option></select></div></div><div class="form-actions"><button class="primary" type="submit">Guardar tarea +</button></div></form>`)}${panel("Lista de tareas",`${tasks.length} tarea(s) registrada(s)`,taskRows())}`}
   function notesPage(){const rows=notes.length?`<div class="list">${notes.map(n=>`<article class="row" style="align-items:flex-start"><div class="row-main"><b>${esc(n.title)}</b><small>${esc(n.subject||"Apunte general")} · ${dateText(n.created_at||new Date())}</small><p class="note-content">${esc(n.content||"")}</p></div><button class="small-button" data-delete-note="${esc(n.id)}">×</button></article>`).join("")}</div>`:empty("Todavía no has guardado apuntes.");return `${panel("Guardar apunte","Guarda ideas importantes para repasar",`<form id="note-form"><div class="form-grid"><div class="full"><label for="note-title">Título</label><input id="note-title" name="title" required maxlength="150" placeholder="Tema de clase"></div><div class="full"><label for="note-subject">Curso</label><input id="note-subject" name="subject" maxlength="100" placeholder="Curso o materia"></div><div class="full"><label for="note-content">Contenido</label><textarea id="note-content" name="content" rows="4" maxlength="12000" required placeholder="Escribe tu resumen…"></textarea></div></div><div class="form-actions"><button class="primary" type="submit">Guardar apunte +</button></div></form>`)}${panel("Mis apuntes",`${notes.length} apunte(s)`,rows)}`}
   function schedulePage(){const rows=[...schedule].sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||"")));const body=rows.length?`<div class="list">${rows.map(s=>`<div class="row"><div class="row-main"><b>${esc(s.title)}</b><small>${esc(s.starts_at?new Date(s.starts_at).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):"Sin fecha")} ${s.subject?"· "+esc(s.subject):""}</small></div><button class="small-button" data-delete-schedule="${esc(s.id)}">×</button></div>`).join("")}</div>`:empty("Agrega tus clases, exámenes o sesiones de estudio.");return `${panel("Añadir al horario","Organiza tus próximas actividades",`<form id="schedule-form"><div class="form-grid"><div class="full"><label for="schedule-title">Actividad</label><input id="schedule-title" name="title" required maxlength="150" placeholder="Ej. Repasar inglés"></div><div><label for="schedule-subject">Curso</label><input id="schedule-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="schedule-start">Fecha y hora</label><input id="schedule-start" name="starts_at" type="datetime-local" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar actividad +</button></div></form>`)}${panel("Próximas actividades",`${rows.length} actividad(es)`,body)}`}
