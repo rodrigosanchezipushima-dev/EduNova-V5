@@ -230,3 +230,115 @@ textarea {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* EduNova V5 — mejoras para celulares */
+@media (max-width: 600px) {
+  #app-view {
+    padding-bottom: 90px;
+  }
+
+  #page-content {
+    min-width: 0;
+    padding-bottom: 1rem;
+  }
+
+  /* Estadísticas en dos columnas */
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .stat {
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  .stat strong {
+    font-size: clamp(1.35rem, 6vw, 2rem);
+    overflow-wrap: anywhere;
+  }
+
+  /* Tarjetas y encabezados */
+  .panel {
+    min-width: 0;
+    padding: 1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .panel-head > div {
+    min-width: 0;
+  }
+
+  /* Formularios cómodos al tacto */
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-grid > *,
+  .form-grid .full {
+    min-width: 0;
+    grid-column: 1 / -1;
+  }
+
+  #page-content input,
+  #page-content select,
+  #page-content textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  #page-content input,
+  #page-content select {
+    min-height: 44px;
+  }
+
+  #page-content textarea {
+    min-height: 110px;
+  }
+
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .form-actions button {
+    flex: 1 1 140px;
+    min-height: 44px;
+  }
+
+  /* Filas de tareas, apuntes y calificaciones */
+  .row {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .row-main {
+    flex: 1 1 160px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .row .pill {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .small-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Navegación inferior y zona segura */
+  .bottom-nav {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
