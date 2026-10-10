@@ -342,3 +342,253 @@ textarea {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
+/* ===== EDUNOVA V5 · DASHBOARD INTELIGENTE ===== */
+
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 25px;
+  margin-bottom: 18px;
+  border: 1px solid #39466b;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 10%, #5de2d022, transparent 35%),
+    linear-gradient(125deg, #202d4c, #111a2d 75%);
+}
+
+.dashboard-hero h2 {
+  margin: 10px 0;
+  font-size: clamp(21px, 3vw, 29px);
+  letter-spacing: -1px;
+}
+
+.dashboard-hero p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.dashboard-kicker {
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.dashboard-actions button {
+  width: auto;
+  margin: 0;
+}
+
+.dashboard-actions .primary {
+  justify-content: center;
+  gap: 8px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 16px;
+}
+
+.dashboard-grid > * {
+  min-width: 0;
+}
+
+.dashboard-section {
+  margin-bottom: 17px;
+}
+
+.dashboard-stat {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-stat .stat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  margin-bottom: 12px;
+  border: 1px solid #394765;
+  border-radius: 10px;
+  background: #202b43;
+  color: var(--cyan);
+  font-size: 16px;
+}
+
+.dashboard-stat strong {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-stat .stat-foot {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.progress-track {
+  height: 7px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #29344b;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8790ff, #5de2d0);
+  transition: width 0.35s ease;
+}
+
+.dashboard-progress {
+  margin-top: 16px;
+}
+
+.dashboard-progress .progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.dashboard-row {
+  align-items: flex-start;
+}
+
+.dashboard-row .row-main small {
+  line-height: 1.6;
+}
+
+.dashboard-row .pill {
+  flex-shrink: 0;
+}
+
+.dashboard-row.is-overdue .pill {
+  color: #ffc2ce;
+  background: #482537;
+}
+
+.dashboard-row.is-upcoming .pill {
+  color: #a8f4e7;
+  background: #173a3a;
+}
+
+.dashboard-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #293650;
+  border-radius: 12px;
+  background: #0e1728;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.dashboard-shortcut:hover {
+  border-color: #7187b5;
+  transform: translateY(-2px);
+}
+
+.dashboard-shortcut .shortcut-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #222e49;
+  color: var(--cyan);
+  font-size: 17px;
+}
+
+.dashboard-shortcut b,
+.dashboard-shortcut small {
+  display: block;
+}
+
+.dashboard-shortcut b {
+  font-size: 12px;
+}
+
+.dashboard-shortcut small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.dashboard-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-welcome-note {
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+@media (min-width: 801px) {
+  .stats:has(.dashboard-stat) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats:has(.dashboard-stat) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-hero {
+    padding: 19px;
+  }
+
+  .dashboard-shortcuts {
+    grid-template-columns: 1fr;
+  }
+
+  .stats:has(.dashboard-stat) {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-actions button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill,
+  .dashboard-shortcut {
+    transition: none;
+  }
+
+  .dashboard-shortcut:hover {
+    transform: none;
+  }
+}
