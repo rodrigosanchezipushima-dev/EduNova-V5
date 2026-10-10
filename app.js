@@ -369,12 +369,14 @@ function timetablePage() {
 
 async function clickHandler(e) {
   const b = e.target.closest("button");
-  if (!b) return; 
-if (b.dataset.timetableEdit) {
-  const [day, period] = b.dataset.timetableEdit.split(":");
-  await editTimetableEntry(Number(day), Number(period));
-  return;
-}
+  if (!b) return;
+
+  if (b.dataset.timetableEdit) {
+    const [day, period] = b.dataset.timetableEdit.split(":");
+    await editTimetableEntry(Number(day), Number(period));
+    return;
+  }
+
 
 
 if (b.dataset.periodAdd !== undefined) {
