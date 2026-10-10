@@ -668,3 +668,30 @@ button:active {
     transition: none !important;
   }
 }
+
+/* ===== EduNova V5: navegación móvil pulida ===== */
+@media (max-width: 600px) {
+  .bottom-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bottom-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bottom-nav .nav-item {
+    flex: 0 0 66px;
+    min-width: 66px;
+    white-space: normal;
+  }
+
+  .bottom-nav .nav-item span:last-child {
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
