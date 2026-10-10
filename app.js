@@ -129,39 +129,71 @@ function studyGoalsPanel() {
   function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({dashboard,tasks:tasksPage,notes:notesPage,schedule:schedulePage,grades:gradesPage}[activePage]||dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
   async function reload(msg){await loadAll();render();if(msg)notice(msg)}
   async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return; const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }if(table==="tasks")values.completed=false;if(table==="grades"){values.score=Number(values.score);values.max_score=Number(values.max_score);if(values.score>values.max_score)throw Error("La nota obtenida no puede superar la nota máxima.")}if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
-   async function clickHandler(e) {   const b = e.target.closest("button");   if (!b) return;    if (b.dataset.page || b.dataset.goto) {     activePage = b.dataset.page || b.dataset.goto;     $("#notice").classList.add("hidden");     render();     return;   }    if (b.dataset.goalAdd) {     const goal = studyGoals.find(       g => String(g.id) === b.dataset.goalAdd     );     if (!goal) return;      const completed = Number(goal.completed) || 0;     const target = Number(goal.target) || 1;      if (completed >= target) {       notice("¡Ya alcanzaste esta meta!");       return;     }      try {       await update("study_goals", goal.id, {         completed: completed + 1       });       await reload("¡Progreso actualizado!");     } catch (err) {       notice(err.message || "No se pudo actualizar la meta.", true);     }     return;   }    if (b.dataset.goalDelete) {     try {       await remove("study_goals", b.dataset.goalDelete);       await reload("Objetivo eliminado.");     } catch (err) {       notice(err.message || "No se pudo eliminar el objetivo.", true);     }     return;   }    const mappings = [     ["deleteTask", "tasks"],     ["deleteNote", "notes"],     ["deleteSchedule", "schedule_items"],     ["deleteGrade", "grades"]   ];    for (const [key, table] of mappings) {     if (b.dataset[key]) {       try {         await remove(table, b.dataset[key]);         await reload("Elemento eliminado.");       } catch (err) {         notice(err.message || "No se pudo eliminar.", true);       }       return;     }   } }const b=e.target.closest("button");if(!b)return;if(b.dataset.page||b.dataset.goto){activePage=b.dataset.page||b.dataset.goto;$("#notice").classList.add("hidden");render();return}const mappings=[["deleteTask","tasks"],["deleteNote","notes"],["deleteSchedule","schedule_items"],["deleteGrade","grades"]];for(const [key,table] of mappings)if(b.dataset[key]){try{await remove(table,b.dataset[key]);await reload("Elemento eliminado.")}catch(err){notice(err.message||"No se pudo eliminar.",true)}return}}
 
-if (b.dataset.goalAdd) {
-  const goal = studyGoals.find(g => String(g.id) === b.dataset.goalAdd);
-  if (!goal) return;
+async function clickHandler(e) {
+  const b = e.target.closest("button");
+  if (!b) return;
 
-  const completed = Number(goal.completed) || 0;
-  const target = Number(goal.target) || 1;
-
-  if (completed >= target) {
-    notice("¡Ya alcanzaste esta meta!");
+  if (b.dataset.page || b.dataset.goto) {
+    activePage = b.dataset.page || b.dataset.goto;
+    $("#notice").classList.add("hidden");
+    render();
     return;
   }
 
-  try {
-    await update("study_goals", goal.id, {
-      completed: completed + 1
-    });
-    await reload("¡Progreso actualizado!");
-  } catch (err) {
-    notice(err.message || "No se pudo actualizar la meta.", true);
-  }
-  return;
-}
+  if (b.dataset.goalAdd) {
+    const goal = studyGoals.find(
+      g => String(g.id) === b.dataset.goalAdd
+    );
+    if (!goal) return;
 
-if (b.dataset.goalDelete) {
-  try {
-    await remove("study_goals", b.dataset.goalDelete);
-    await reload("Objetivo eliminado.");
-  } catch (err) {
-    notice(err.message || "No se pudo eliminar el objetivo.", true);
+    const completed = Number(goal.completed) || 0;
+    const target = Number(goal.target) || 1;
+
+    if (completed >= target) {
+      notice("¡Ya alcanzaste esta meta!");
+      return;
+    }
+
+    try {
+      await update("study_goals", goal.id, {
+        completed: completed + 1
+      });
+      await reload("¡Progreso actualizado!");
+    } catch (err) {
+      notice(err.message || "No se pudo actualizar la meta.", true);
+    }
+    return;
   }
-  return;
+
+  if (b.dataset.goalDelete) {
+    try {
+      await remove("study_goals", b.dataset.goalDelete);
+      await reload("Objetivo eliminado.");
+    } catch (err) {
+      notice(err.message || "No se pudo eliminar el objetivo.", true);
+    }
+    return;
+  }
+
+  const mappings = [
+    ["deleteTask", "tasks"],
+    ["deleteNote", "notes"],
+    ["deleteSchedule", "schedule_items"],
+    ["deleteGrade", "grades"]
+  ];
+
+  for (const [key, table] of mappings) {
+    if (b.dataset[key]) {
+      try {
+        await remove(table, b.dataset[key]);
+        await reload("Elemento eliminado.");
+      } catch (err) {
+        notice(err.message || "No se pudo eliminar.", true);
+      }
+      return;
+    }
+  }
 }
 
   async function changeHandler(e){const el=e.target;if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
