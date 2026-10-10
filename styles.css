@@ -22,11 +22,6 @@ button:focus-visible {
 .auth-card {
   box-shadow: 0 12px 32px #00000012;
 }
-
-.panel {
-  transition: border-color .18s ease;
-}
-
 .panel:hover {
   border-color: #3b4d70;
 }
@@ -123,11 +118,6 @@ textarea {
   }
 
   .stat,
-  .panel {
-    border-radius: 15px;
-    padding: 16px;
-  }
-
   .form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -254,17 +244,20 @@ textarea {
   }
 
   .stat strong {
-    font-size: clamp(1.35rem, 6vw, 2rem);
+    font-si
+.panel {
+  min-width: 0;
+  padding: 1rem;
+  margin-bottom: 0.9rem;
+  border-radius: 15px;
+  transition: border-color 0.18s ease;
+  animation: edunovaRise 0.4s ease-out both;
+}
+ze: clamp(1.35rem, 6vw, 2rem);
     overflow-wrap: anywhere;
   }
 
   /* Tarjetas y encabezados */
-  .panel {
-    min-width: 0;
-    padding: 1rem;
-    margin-bottom: 0.9rem;
-  }
-
   .panel-head {
     flex-wrap: wrap;
     align-items: flex-start;
@@ -635,11 +628,6 @@ textarea {
   border-color: #6575a6;
   box-shadow: 0 16px 35px #00000030;
 }
-
-.panel {
-  animation: edunovaRise 0.4s ease-out both;
-}
-
 .row {
   transition:
     border-color 0.2s ease,
@@ -658,10 +646,6 @@ button:active {
 @media (prefers-reduced-motion: reduce) {
   .workspace-top,
   .stats .stat,
-  .panel {
-    animation: none !important;
-  }
-
   .stats .stat,
   .row,
   button {
