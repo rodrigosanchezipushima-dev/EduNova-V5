@@ -546,21 +546,20 @@ if (b.dataset.periodConfig !== undefined) {
   $("#connection-label").textContent = "Conexión preparada";
 
  
-try {
-  const { data, error } = await client.auth.getSession();
+  try {
+    const { data, error } = await client.auth.getSession();
 
-  if (error) throw error;
+    if (error) throw error;
 
-  if (data.session?.user) {
-    user = data.session.user;
-    await enterApp();
-  }
-} catch (err) {
-  authMessage(
-    err.message || "No se pudo comprobar la sesión. Inténtalo nuevamente.",
-    true
-  
-  );
+    if (data.session?.user) {
+      user = data.session.user;
+      await enterApp();
+    }
+  } catch (err) {
+    authMessage(
+      err.message || "No se pudo comprobar la sesión. Inténtalo nuevamente.",
+      true
+    );
   }
 }
 
