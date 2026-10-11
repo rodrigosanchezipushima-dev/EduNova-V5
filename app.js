@@ -159,12 +159,15 @@ function studyGoalsPanel() {
   function schedulePage(){const rows=[...schedule].sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||"")));const body=rows.length?`<div class="list">${rows.map(s=>`<div class="row"><div class="row-main"><b>${esc(s.title)}</b><small>${esc(s.starts_at?new Date(s.starts_at).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):"Sin fecha")} ${s.subject?"· "+esc(s.subject):""}</small></div><button class="small-button" data-delete-schedule="${esc(s.id)}">×</button></div>`).join("")}</div>`:empty("Agrega tus clases, exámenes o sesiones de estudio.");return `${panel("Añadir al horario","Organiza tus próximas actividades",`<form id="schedule-form"><div class="form-grid"><div class="full"><label for="schedule-title">Actividad</label><input id="schedule-title" name="title" required maxlength="150" placeholder="Ej. Repasar inglés"></div><div><label for="schedule-subject">Curso</label><input id="schedule-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="schedule-start">Fecha y hora</label><input id="schedule-start" name="starts_at" type="datetime-local" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar actividad +</button></div></form>`)}${panel("Próximas actividades",`${rows.length} actividad(es)`,body)}`}
   
 async function addTimetablePeriod() {
-  const number = timetablePeriods.length + 1;
+ 
+const usedNumbers = timetablePeriods.map(
+  p => Number(p.period_number)
+);
+const number = Array.from(
+  { length: 20 },
+  (_, i) => i + 1
+).find(n => !usedNumbers.includes(n));
 
-  if (number > 20) {
-    notice("Puedes configurar hasta 20 períodos.", true);
-    return;
-  }
 
   const start = prompt("Hora de inicio (HH:MM):", "08:00");
   if (start === null) return;
