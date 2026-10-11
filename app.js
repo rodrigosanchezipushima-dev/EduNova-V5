@@ -250,6 +250,38 @@ async function configureTimetablePeriod() {
   }
 }
 
+async function deleteTimetablePeriod(periodNumber) {
+  const period = timetablePeriods.find(
+    p => Number(p.period_number) === Number(periodNumber)
+  );
+
+  if (!period) {
+    notice("No se encontró ese período.", true);
+    return;
+  }
+
+  const confirmed = confirm(
+    `¿Eliminar el período ${period.period_number} (${String(period.start_time).slice(0, 5)} - ${String(period.end_time).slice(0, 5)}) y todas sus clases?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const relatedEntries = timetableEntries.filter(
+      e => Number(e.period_number) === Number(periodNumber)
+    );
+
+    for (const entry of relatedEntries) {
+      await remove("timetable_entries", entry.id);
+    }
+
+    await remove("timetable_periods", period.id);
+    await reload("Período eliminado correctamente.");
+  } catch (err) {
+    notice(err.message || "No se pudo eliminar el período.", true);
+  }
+}
+
 async function editTimetableEntry(day, periodNumber) {
   const period = timetablePeriods.find(
     p => Number(p.period_number) === Number(periodNumber)
@@ -346,7 +378,8 @@ function timetablePage() {
     { id: 2, name: "Martes" },
     { id: 3, name: "Miércoles" },
     { id: 4, name: "Jueves" },
-    { id: 5, name: "Viernes" }
+    { id: 5, name: "Viernes" },
+    { id: 6, name: "Sabado" }
   ];
 
   const periods = [...timetablePeriods].sort(
