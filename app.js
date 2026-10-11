@@ -238,7 +238,17 @@ async function configureTimetablePeriod() {
     notice("Introduce horas válidas. La hora final debe ser posterior.", true);
     return;
   }
+const duplicate = timetablePeriods.some(
+  p =>
+    Number(p.period_number) !== Number(number) &&
+    String(p.start_time).slice(0, 5) === start &&
+    String(p.end_time).slice(0, 5) === end
+);
 
+if (duplicate) {
+  notice("Otro período ya tiene ese horario.", true);
+  return;
+}
   try {
     await update("timetable_periods", period.id, {
       start_time: start,
