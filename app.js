@@ -600,8 +600,10 @@ function timetablePage() {
           <div class="settings-actions">
             <button class="secondary" type="button" data-export-data>Exportar mis datos</button>
             <button class="primary settings-primary" type="button" data-export-backup>Crear copia de seguridad</button>
+            <button class="secondary" type="button" data-import-backup>Restaurar desde archivo JSON</button>
+            <input id="backup-file-input" type="file" accept="application/json,.json" hidden>
           </div>
-          <p class="field-help settings-footnote">La copia se descarga en tu dispositivo. Guárdala en un lugar privado. La restauración automática se añadirá después de verificar las relaciones entre tus tablas de Supabase.</p>
+          <p class="field-help settings-footnote">Para restaurar, selecciona una copia JSON creada por EduNova V5. Los registros se añadirán a tu cuenta actual; no se borrarán los datos existentes. Evita importar el mismo archivo más de una vez, ya que podría crear duplicados.</p>
         `)}
         ${panel("Cuenta y seguridad", "Acciones de tu sesión", `
           <div class="security-row"><div><strong>Sesión actual</strong><small class="field-help">${esc(email)}</small></div><button type="button" class="secondary" data-settings-logout>Cerrar sesión</button></div>
@@ -678,6 +680,51 @@ function timetablePage() {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function restoreBackupFile(file) {
+    if (!user || !client) { notice("Inicia sesión antes de restaurar una copia.", true); return; }
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { notice("El archivo supera el límite de 5 MB.", true); return; }
+    let backup;
+    try { backup = JSON.parse(await file.text()); }
+    catch { notice("El archivo no contiene un JSON válido.", true); return; }
+    if (backup?.app !== "EduNova V5" || !backup?.data || !Number.isInteger(backup.format_version)) {
+      notice("Este archivo no parece una copia de seguridad válida de EduNova V5.", true); return;
+    }
+    const mapping = [
+      ["tasks", "tasks"], ["notes", "notes"], ["schedule_items", "schedule_items"],
+      ["grades", "grades"], ["study_goals", "study_goals"],
+      ["timetable_periods", "timetable_periods"], ["timetable_entries", "timetable_entries"]
+    ];
+    const available = mapping.filter(([key]) => Array.isArray(backup.data[key]) && backup.data[key].length);
+    const total = available.reduce((sum, [key]) => sum + backup.data[key].length, 0);
+    if (!total) { notice("La copia no contiene registros para restaurar.", true); return; }
+    const summary = available.map(([key]) => `${backup.data[key].length} ${key}`).join("\n");
+    if (!confirm(`Se añadirán ${total} registros a la cuenta actualmente iniciada:\n\n${summary}\n\nNo se borrarán los datos existentes. Si ya importaste esta copia, cancela para evitar duplicados. ¿Continuar?`)) return;
+    let added = 0, failed = [];
+    for (const [key, table] of available) {
+      for (const original of backup.data[key]) {
+        // Never trust IDs or user_id from an imported file: assign ownership to the signed-in user.
+        const row = { ...original };
+        delete row.id;
+        delete row.user_id;
+        // Avoid carrying fields that are managed by the database/auth session.
+        try {
+          const { error } = await client.from(table).insert({ ...row, user_id: user.id });
+          if (error) throw error;
+          added++;
+        } catch (err) {
+          failed.push(`${table}: ${err.message || "error al insertar"}`);
+        }
+      }
+    }
+    await reload("");
+    if (failed.length) {
+      notice(`Restauración parcial: ${added} registro(s) añadidos y ${failed.length} con error. Primer error: ${failed[0]}`, true);
+    } else {
+      notice(`Restauración completada: ${added} registro(s) añadidos. No se eliminaron datos existentes.`);
+    }
   }
 
   function exportUserData(kind = "data") {
@@ -776,6 +823,11 @@ if (b.dataset.periodConfig !== undefined) {
     return;
   }
 
+  if (b.hasAttribute("data-import-backup")) {
+    $("#backup-file-input")?.click();
+    return;
+  }
+
   if (b.hasAttribute("data-settings-logout")) {
     await signOut();
     return;
@@ -857,6 +909,13 @@ if (b.dataset.periodConfig !== undefined) {
 
   $("#page-content").addEventListener("submit", submitForm);
   document.addEventListener("click", clickHandler);
+  $("#page-content").addEventListener("change", async e => {
+    if (e.target?.id === "backup-file-input") {
+      const file = e.target.files?.[0];
+      await restoreBackupFile(file);
+      e.target.value = "";
+    }
+  });
   $("#page-content").addEventListener("change", changeHandler);
 
   if (!configured()) {
