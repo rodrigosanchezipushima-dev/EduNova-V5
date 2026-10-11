@@ -716,3 +716,135 @@ button:active {
     text-overflow: ellipsis;
   }
 }
+
+
+/* ===== Horario semanal en cuadrícula: conserva la paleta de EduNova ===== */
+.timetable-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.timetable-toolbar > p { margin: 0; color: var(--muted); }
+.timetable-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.timetable-panel { overflow: hidden; }
+.timetable-heading {
+  position: relative;
+  text-align: center;
+  padding: 8px 12px 22px;
+}
+.timetable-heading h2 {
+  display: inline-block;
+  margin: 0;
+  padding: 10px 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: clamp(19px, 2.4vw, 27px);
+  letter-spacing: 2px;
+}
+.timetable-heading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.timetable-heading-decoration {
+  position: absolute;
+  right: 8%;
+  top: 0;
+  color: var(--cyan);
+  font-size: 24px;
+}
+.timetable-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.timetable-grid {
+  width: 100%;
+  min-width: 690px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: var(--bg);
+}
+.timetable-grid th,
+.timetable-grid td {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.timetable-grid thead th {
+  padding: 13px 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.timetable-grid thead th:first-child { width: 105px; }
+.timetable-grid tr > *:last-child { border-right: 0; }
+.timetable-grid tbody tr:last-child > * { border-bottom: 0; }
+.timetable-grid .timetable-hours-heading,
+.timetable-grid .timetable-time {
+  background: color-mix(in srgb, var(--panel) 88%, var(--blue));
+}
+.timetable-grid .timetable-time {
+  padding: 8px 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+.timetable-time span { display: block; white-space: nowrap; }
+.timetable-time .timetable-time-divider {
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.timetable-cell { height: 86px; padding: 5px; vertical-align: stretch; }
+.timetable-class {
+  display: flex;
+  width: 100%;
+  min-height: 74px;
+  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px;
+  border: 0;
+  border-left: 3px solid var(--class-accent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--class-accent) 12%, var(--panel));
+  color: var(--text);
+  text-align: left;
+  overflow-wrap: anywhere;
+  transition: background .18s ease, transform .18s ease;
+}
+.timetable-class:hover {
+  background: color-mix(in srgb, var(--class-accent) 20%, var(--panel));
+}
+.timetable-class strong { font-size: 12px; line-height: 1.35; }
+.timetable-class small { color: var(--muted); font-size: 10px; line-height: 1.3; }
+.timetable-edit-hint { margin-top: 2px; color: var(--blue); font-size: 10px; }
+.timetable-empty {
+  padding: 28px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.timetable-footnote { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
+@media (max-width: 600px) {
+  .timetable-actions { width: 100%; }
+  .timetable-actions button { flex: 1 1 140px; }
+  .timetable-panel { padding: 14px; }
+  .timetable-cell { height: 78px; padding: 4px; }
+  .timetable-class { min-height: 68px; padding: 7px; }
+}
