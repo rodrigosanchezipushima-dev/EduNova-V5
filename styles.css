@@ -104,7 +104,12 @@ textarea {
 }
 
 /* ===== Móviles: navegación inferior ===== */
-@media (max-width: 600px) {
+@media (max-width: 600px)
+  .panel {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+{
   body {
     padding-bottom: calc(78px + env(safe-area-inset-bottom));
   }
