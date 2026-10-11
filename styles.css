@@ -589,6 +589,7 @@ ze: clamp(1.35rem, 6vw, 2rem);
 
 /* ===== EduNova V5: animaciones dinámicas ===== */
 
+
 @keyframes edunovaRise {
   from {
     opacity: 0;
@@ -599,6 +600,7 @@ ze: clamp(1.35rem, 6vw, 2rem);
     transform: translateY(0);
   }
 }
+
 
 .workspace-top {
   animation: edunovaRise 0.45s ease-out both;
