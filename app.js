@@ -3,6 +3,7 @@
   const $ = s => document.querySelector(s);
   let client = null, mode = "login", user = null, activePage = "dashboard";
   let tasks = [], notes = [], schedule = [], grades = [], studyGoals = []; let timetablePeriods = [], timetableEntries = [];
+  let userPreferences = { theme: "dark", dailyGoal: "30", studyTips: true };
   const configured = () =>
   typeof window.EDUNOVA_SUPABASE_URL === "string" &&
   window.EDUNOVA_SUPABASE_URL.startsWith("https://") &&
@@ -10,6 +11,37 @@
   window.EDUNOVA_SUPABASE_ANON_KEY.trim().length > 0;
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const dateText = d => new Date(d).toLocaleDateString("es-PE", {day:"2-digit",month:"short",year:"numeric"});
+
+  function currentDisplayName() {
+    return String(user?.user_metadata?.display_name || user?.user_metadata?.full_name || "").trim();
+  }
+
+  function applyTheme(theme) {
+    const selectedTheme = theme === "light" ? "light" : "dark";
+    document.body.dataset.theme = selectedTheme;
+    document.documentElement.style.colorScheme = selectedTheme;
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.content = selectedTheme === "light" ? "#f3f6fc" : "#090e1c";
+  }
+
+  function loadUserPreferences() {
+    const metadata = user?.user_metadata || {};
+    const saved = metadata.edunova_preferences || {};
+    userPreferences = {
+      theme: saved.theme === "light" ? "light" : "dark",
+      dailyGoal: ["15", "30", "45", "60", "90"].includes(String(saved.daily_goal)) ? String(saved.daily_goal) : "30",
+      studyTips: saved.study_tips !== false
+    };
+    applyTheme(userPreferences.theme);
+  }
+
+  function syncSidebarIdentity() {
+    const visibleName = currentDisplayName() || user?.email || "Estudiante";
+    const userLabel = $("#user-email");
+    const initials = $("#user-initials");
+    if (userLabel) userLabel.textContent = visibleName;
+    if (initials) initials.textContent = visibleName.trim().charAt(0).toUpperCase() || "E";
+  }
   function authMessage(text, error=false){const el=$("#auth-message");el.textContent=text;el.classList.toggle("error",error)}
   function notice(text,error=false){const el=$("#notice");el.textContent=text;el.classList.remove("hidden","error");if(error)el.classList.add("error")}
   function panel(title, subtitle, body, action=""){return `<section class="panel"><div class="panel-head"><div><h3>${title}</h3>${subtitle?`<p>${subtitle}</p>`:""}</div>${action}</div>${body}</section>`}
@@ -27,8 +59,8 @@
     logoutMobile.hidden = false;
   }
 
-  $("#user-email").textContent = user.email || "Estudiante";
-  $("#user-initials").textContent = (user.email || "E")[0].toUpperCase();
+  loadUserPreferences();
+  syncSidebarIdentity();
   $("#today-label").textContent = dateText(new Date());
   $("#connection-label").textContent = "Sesión iniciada";
 
@@ -46,6 +78,8 @@ async function signOut() {
   }
 
   user = null;
+  userPreferences = { theme: "dark", dailyGoal: "30", studyTips: true };
+  applyTheme("dark");
 
   $("#app-view").classList.add("hidden");
   $("#auth-view").classList.remove("hidden");
@@ -98,7 +132,7 @@ async function loadAll() {
   async function update(table,id,values){const {error}=await client.from(table).update(values).eq("id",id).eq("user_id",user.id);if(error)throw error}
   async function remove(table,id){const {error}=await client.from(table).delete().eq("id",id).eq("user_id",user.id);if(error)throw error}
   function taskRows(limit=Infinity){const list=[...tasks].sort((a,b)=>Number(a.completed)-Number(b.completed)).slice(0,limit);if(!list.length)return empty("Todavía no tienes tareas. ¡Agrega la primera!");return `<div class="list">${list.map(t=>`<div class="row ${t.completed?"completed":""}"><input class="check" type="checkbox" data-complete="${esc(t.id)}" ${t.completed?"checked":""} aria-label="Completar tarea"><div class="row-main"><b>${esc(t.title)}</b><small>${esc(t.due_date?`Fecha: ${t.due_date}`:(t.subject||"Sin curso"))}</small></div><span class="pill">${t.completed?"Completada":esc(t.priority||"Normal")}</span><button class="small-button" data-delete-task="${esc(t.id)}" aria-label="Eliminar">×</button></div>`).join("")}</div>`}
-function dashboardDate(value) {   if (!value) return "Sin fecha límite";    const date = new Date(value + (     /^\d{4}-\d{2}-\d{2}$/.test(value) ? "T00:00:00" : ""   ));    if (Number.isNaN(date.getTime())) return "Fecha no disponible";    return date.toLocaleDateString("es-PE", {     day: "2-digit",     month: "short"   }); }  function dashboard() {   const today = new Date();   today.setHours(0, 0, 0, 0);    const pending = tasks.filter(t => !t.completed);   const completed = tasks.filter(t => t.completed);    const overdue = pending.filter(t =>     t.due_date &&     !Number.isNaN(new Date(t.due_date + "T00:00:00").getTime()) &&     new Date(t.due_date + "T00:00:00") < today   );    const completion = tasks.length     ? Math.round(completed.length / tasks.length * 100)     : 0;    const average = grades.length     ? (grades.reduce((sum, g) => sum + Number(g.score || 0), 0)         / grades.length).toFixed(1)     : "—";    const upcomingTasks = [...pending]     .sort((a, b) => {       if (!a.due_date) return 1;       if (!b.due_date) return -1;       return a.due_date.localeCompare(b.due_date);     })     .slice(0, 4);    const upcomingSchedule = [...schedule]     .filter(s => {       if (!s.starts_at) return false;       const date = new Date(s.starts_at);       return !Number.isNaN(date.getTime()) && date >= new Date();     })     .sort((a, b) =>       new Date(a.starts_at) - new Date(b.starts_at)     )     .slice(0, 4);    const taskList = upcomingTasks.length     ? `<div class="list">${upcomingTasks.map(t => {         const isOverdue = t.due_date &&           new Date(t.due_date + "T00:00:00") < today;          return `<div class="row dashboard-row ${isOverdue ? "is-overdue" : ""}">           <div class="row-main">             <b>${esc(t.title)}</b>             <small>${esc(t.subject || "Sin curso")} · ${esc(dashboardDate(t.due_date))}</small>           </div>           <span class="pill">${isOverdue ? "Atrasada" : esc(t.priority || "Normal")}</span>           <button class="small-button" data-goto="tasks">Ver</button>         </div>`;       }).join("")}</div>`     : empty("¡Todo al día! Puedes añadir una nueva tarea.");    const scheduleList = upcomingSchedule.length     ? `<div class="list">${upcomingSchedule.map(s => `         <div class="row dashboard-row is-upcoming">           <div class="row-main">             <b>${esc(s.title)}</b>             <small>${esc(s.subject || "Actividad de estudio")} ·             ${esc(new Date(s.starts_at).toLocaleString("es-PE", {               day: "2-digit",               month: "short",               hour: "2-digit",               minute: "2-digit"             }))}</small>           </div>           <span class="pill">Próxima</span>         </div>`).join("")}</div>`     : empty("No tienes actividades futuras registradas.");    const notesList = notes.length     ? `<div class="list">${[...notes]         .sort((a, b) =>           new Date(b.created_at || 0) - new Date(a.created_at || 0)         )         .slice(0, 3).map(n => `           <div class="row dashboard-row">             <div class="row-main">               <b>${esc(n.title)}</b>               <small>${esc(n.subject || "Apunte general")}</small>             </div>             <button class="small-button" data-goto="notes">Abrir</button>           </div>`).join("")}</div>`     : empty("Tus apuntes aparecerán aquí cuando guardes uno.");    return `     <section class="dashboard-hero">       <div class="dashboard-kicker">Tu espacio de aprendizaje</div>       <h2>Un paso a la vez. Sigue avanzando.</h2>       <p>         Tienes ${pending.length} tarea(s) pendiente(s),         ${overdue.length} atrasada(s) y         ${upcomingSchedule.length} actividad(es) próximas en tu horario.         Organiza tu tiempo y avanza a tu ritmo.       </p>       <div class="dashboard-actions">         <button class="primary" data-goto="tasks">+ Nueva tarea</button>         <button class="secondary" data-goto="notes">+ Consultar apuntes</button>         <button class="secondary" data-goto="schedule">Ver horario →</button>       </div>     </section>      <div class="stats">       <div class="stat dashboard-stat">         <span class="stat-icon">◷</span>         <small>Tareas pendientes</small>         <strong>${pending.length}</strong>         <span class="stat-foot">${overdue.length} atrasada(s)</span>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">✓</span>         <small>Tareas completadas</small>         <strong>${completed.length}</strong>         <span class="stat-foot">De ${tasks.length} tarea(s) registradas</span>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">↗</span>         <small>Progreso de tareas</small>         <strong>${completion}%</strong>         <div class="progress-track" role="progressbar"           aria-label="Progreso de tareas"           aria-valuemin="0" aria-valuemax="100"           aria-valuenow="${completion}">           <div class="progress-fill" style="width:${completion}%"></div>         </div>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">★</span>         <small>Promedio registrado</small>         <strong>${average}</strong>         <span class="stat-foot">${grades.length} calificación(es)</span>       </div>     </div>      <div class="dashboard-grid">       <div>         ${panel(           "Tareas por resolver",           "Prioriza lo que tienes pendiente",           taskList,           '<button class="secondary" data-goto="tasks">Todas las tareas →</button>'         )}          ${panel(           "Próximas actividades",           "Tu agenda de estudio",           scheduleList,           '<button class="secondary" data-goto="schedule">Abrir horario →</button>'         )}       </div>        <div>         ${panel(           "Tus apuntes recientes",           "Material para repasar",           notesList,           '<button class="secondary" data-goto="notes">Todos los apuntes →</button>'         )}          <section class="panel">           <div class="panel-head">             <div>               <h3>Accesos rápidos</h3>               <p>Entra directamente a una sección.</p>             </div>           </div>            <div class="dashboard-shortcuts">             <button class="dashboard-shortcut" data-goto="tasks">               <span class="shortcut-icon">✓</span>               <span><b>Mis tareas</b><small>Organiza pendientes</small></span>             </button>              <button class="dashboard-shortcut" data-goto="notes">               <span class="shortcut-icon">▤</span>               <span><b>Mis apuntes</b><small>Repasa tus resúmenes</small></span>             </button>              <button class="dashboard-shortcut" data-goto="grades">               <span class="shortcut-icon">★</span>               <span><b>Calificaciones</b><small>Consulta tus notas</small></span>             </button>              <button class="dashboard-shortcut" data-goto="schedule">               <span class="shortcut-icon">◷</span>               <span><b>Mi horario</b><small>Organiza tu tiempo</small></span>             </button>           </div>            <p class="dashboard-welcome-note">             Tus estadísticas se calculan a partir de los registros             disponibles en tu cuenta.           </p>         </section>       </div>     </div>   `; }
+function dashboardDate(value) {   if (!value) return "Sin fecha límite";    const date = new Date(value + (     /^\d{4}-\d{2}-\d{2}$/.test(value) ? "T00:00:00" : ""   ));    if (Number.isNaN(date.getTime())) return "Fecha no disponible";    return date.toLocaleDateString("es-PE", {     day: "2-digit",     month: "short"   }); }  function dashboard() {   const today = new Date();   today.setHours(0, 0, 0, 0);    const pending = tasks.filter(t => !t.completed);   const completed = tasks.filter(t => t.completed);    const overdue = pending.filter(t =>     t.due_date &&     !Number.isNaN(new Date(t.due_date + "T00:00:00").getTime()) &&     new Date(t.due_date + "T00:00:00") < today   );    const completion = tasks.length     ? Math.round(completed.length / tasks.length * 100)     : 0;    const average = grades.length     ? (grades.reduce((sum, g) => sum + Number(g.score || 0), 0)         / grades.length).toFixed(1)     : "—";    const upcomingTasks = [...pending]     .sort((a, b) => {       if (!a.due_date) return 1;       if (!b.due_date) return -1;       return a.due_date.localeCompare(b.due_date);     })     .slice(0, 4);    const upcomingSchedule = [...schedule]     .filter(s => {       if (!s.starts_at) return false;       const date = new Date(s.starts_at);       return !Number.isNaN(date.getTime()) && date >= new Date();     })     .sort((a, b) =>       new Date(a.starts_at) - new Date(b.starts_at)     )     .slice(0, 4);    const taskList = upcomingTasks.length     ? `<div class="list">${upcomingTasks.map(t => {         const isOverdue = t.due_date &&           new Date(t.due_date + "T00:00:00") < today;          return `<div class="row dashboard-row ${isOverdue ? "is-overdue" : ""}">           <div class="row-main">             <b>${esc(t.title)}</b>             <small>${esc(t.subject || "Sin curso")} · ${esc(dashboardDate(t.due_date))}</small>           </div>           <span class="pill">${isOverdue ? "Atrasada" : esc(t.priority || "Normal")}</span>           <button class="small-button" data-goto="tasks">Ver</button>         </div>`;       }).join("")}</div>`     : empty("¡Todo al día! Puedes añadir una nueva tarea.");    const scheduleList = upcomingSchedule.length     ? `<div class="list">${upcomingSchedule.map(s => `         <div class="row dashboard-row is-upcoming">           <div class="row-main">             <b>${esc(s.title)}</b>             <small>${esc(s.subject || "Actividad de estudio")} ·             ${esc(new Date(s.starts_at).toLocaleString("es-PE", {               day: "2-digit",               month: "short",               hour: "2-digit",               minute: "2-digit"             }))}</small>           </div>           <span class="pill">Próxima</span>         </div>`).join("")}</div>`     : empty("No tienes actividades futuras registradas.");    const notesList = notes.length     ? `<div class="list">${[...notes]         .sort((a, b) =>           new Date(b.created_at || 0) - new Date(a.created_at || 0)         )         .slice(0, 3).map(n => `           <div class="row dashboard-row">             <div class="row-main">               <b>${esc(n.title)}</b>               <small>${esc(n.subject || "Apunte general")}</small>             </div>             <button class="small-button" data-goto="notes">Abrir</button>           </div>`).join("")}</div>`     : empty("Tus apuntes aparecerán aquí cuando guardes uno.");    return `     <section class="dashboard-hero">       <div class="dashboard-kicker">Tu espacio de aprendizaje</div>       <h2>Un paso a la vez. Sigue avanzando.</h2>       <p>         Tienes ${pending.length} tarea(s) pendiente(s),         ${overdue.length} atrasada(s) y         ${upcomingSchedule.length} actividad(es) próximas en tu horario.         Organiza tu tiempo y avanza a tu ritmo.       </p>       <div class="dashboard-actions">         <button class="primary" data-goto="tasks">+ Nueva tarea</button>         <button class="secondary" data-goto="notes">+ Consultar apuntes</button>         <button class="secondary" data-goto="schedule">Ver horario →</button>       </div>     </section>      <div class="stats">       <div class="stat dashboard-stat">         <span class="stat-icon">◷</span>         <small>Tareas pendientes</small>         <strong>${pending.length}</strong>         <span class="stat-foot">${overdue.length} atrasada(s)</span>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">✓</span>         <small>Tareas completadas</small>         <strong>${completed.length}</strong>         <span class="stat-foot">De ${tasks.length} tarea(s) registradas</span>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">↗</span>         <small>Progreso de tareas</small>         <strong>${completion}%</strong>         <div class="progress-track" role="progressbar"           aria-label="Progreso de tareas"           aria-valuemin="0" aria-valuemax="100"           aria-valuenow="${completion}">           <div class="progress-fill" style="width:${completion}%"></div>         </div>       </div>        <div class="stat dashboard-stat">         <span class="stat-icon">★</span>         <small>Promedio registrado</small>         <strong>${average}</strong>         <span class="stat-foot">${grades.length} calificación(es)</span>       </div>     </div>      <div class="dashboard-grid">       <div>         ${panel(           "Tareas por resolver",           "Prioriza lo que tienes pendiente",           taskList,           '<button class="secondary" data-goto="tasks">Todas las tareas →</button>'         )}          ${panel(           "Próximas actividades",           "Tu agenda de estudio",           scheduleList,           '<button class="secondary" data-goto="schedule">Abrir horario →</button>'         )}       </div>        <div>         ${panel(           "Tus apuntes recientes",           "Material para repasar",           notesList,           '<button class="secondary" data-goto="notes">Todos los apuntes →</button>'         )}          <section class="panel">           <div class="panel-head">             <div>               <h3>Accesos rápidos</h3>               <p>Entra directamente a una sección.</p>             </div>           </div>            <div class="dashboard-shortcuts">             <button class="dashboard-shortcut" data-goto="tasks">               <span class="shortcut-icon">✓</span>               <span><b>Mis tareas</b><small>Organiza pendientes</small></span>             </button>              <button class="dashboard-shortcut" data-goto="notes">               <span class="shortcut-icon">▤</span>               <span><b>Mis apuntes</b><small>Repasa tus resúmenes</small></span>             </button>              <button class="dashboard-shortcut" data-goto="grades">               <span class="shortcut-icon">★</span>               <span><b>Calificaciones</b><small>Consulta tus notas</small></span>             </button>              <button class="dashboard-shortcut" data-goto="schedule">               <span class="shortcut-icon">◷</span>               <span><b>Mi horario</b><small>Organiza tu tiempo</small></span>             </button>           </div>            ${userPreferences.studyTips ? `<p class="dashboard-welcome-note">             Tus estadísticas se calculan a partir de los registros             disponibles en tu cuenta.           </p>` : ""}         </section>       </div>     </div>   `; }
   
 function studyGoalsPanel() {
   const goals = studyGoals.filter(g => {
@@ -511,11 +545,158 @@ function timetablePage() {
   `;
 }
 
+  function settingsPage() {
+    const metadata = user?.user_metadata || {};
+    const displayName = currentDisplayName();
+    const email = user?.email || "";
+    return `
+      <div class="settings-stack">
+        ${panel("Mi perfil", "Administra la información que aparece en tu espacio", `
+          <form id="profile-form">
+            <div class="form-grid">
+              <div class="full">
+                <label for="profile-display-name">Nombre visible</label>
+                <input id="profile-display-name" name="display_name" maxlength="80" required value="${esc(displayName)}" placeholder="¿Cómo quieres que te llamemos?">
+                <small class="field-help">Este nombre se mostrará en el menú de EduNova.</small>
+              </div>
+              <div class="full">
+                <label for="profile-email">Correo de la cuenta</label>
+                <input id="profile-email" type="email" value="${esc(email)}" readonly>
+                <small class="field-help">El correo está administrado por Supabase y no se cambia desde este formulario.</small>
+              </div>
+            </div>
+            <div class="form-actions"><button class="primary" type="submit">Guardar perfil <span>✓</span></button></div>
+          </form>
+        `)}
+        ${panel("Apariencia y preferencias", "Personaliza tu experiencia de estudio", `
+          <form id="preferences-form">
+            <div class="form-grid">
+              <div>
+                <label for="pref-theme">Tema visual</label>
+                <select id="pref-theme" name="theme">
+                  <option value="dark" ${userPreferences.theme === "dark" ? "selected" : ""}>Oscuro tecnológico</option>
+                  <option value="light" ${userPreferences.theme === "light" ? "selected" : ""}>Claro</option>
+                </select>
+              </div>
+              <div>
+                <label for="pref-daily-goal">Tiempo de estudio sugerido</label>
+                <select id="pref-daily-goal" name="daily_goal">
+                  ${[15, 30, 45, 60, 90].map(minutes => `<option value="${minutes}" ${String(minutes) === userPreferences.dailyGoal ? "selected" : ""}>${minutes} minutos al día</option>`).join("")}
+                </select>
+              </div>
+              <div class="full settings-toggle-row">
+                <div><strong>Mostrar nota informativa en el resumen</strong><small class="field-help">Muestra una explicación breve de tus estadísticas en la página principal.</small></div>
+                <label class="switch-label" for="pref-study-tips"><input id="pref-study-tips" name="study_tips" type="checkbox" ${userPreferences.studyTips ? "checked" : ""}><span>Activadas</span></label>
+              </div>
+            </div>
+            <div class="form-actions"><button class="primary" type="submit">Guardar preferencias <span>✓</span></button></div>
+          </form>
+        `)}
+        ${panel("Exportación y copias de seguridad", "Descarga una copia de los datos de tu cuenta", `
+          <div class="backup-card">
+            <div class="backup-icon">↧</div>
+            <div class="backup-copy"><strong>Tu información, bajo tu control</strong><p>Descarga un archivo JSON con tus tareas, apuntes, actividades, calificaciones, objetivos, horario personalizado y preferencias.</p></div>
+          </div>
+          <div class="settings-actions">
+            <button class="secondary" type="button" data-export-data>Exportar mis datos</button>
+            <button class="primary settings-primary" type="button" data-export-backup>Crear copia de seguridad</button>
+          </div>
+          <p class="field-help settings-footnote">La copia se descarga en tu dispositivo. Guárdala en un lugar privado. La restauración automática se añadirá después de verificar las relaciones entre tus tablas de Supabase.</p>
+        `)}
+        ${panel("Cuenta y seguridad", "Acciones de tu sesión", `
+          <div class="security-row"><div><strong>Sesión actual</strong><small class="field-help">${esc(email)}</small></div><button type="button" class="secondary" data-settings-logout>Cerrar sesión</button></div>
+          <p class="field-help">No compartas tu contraseña ni archivos de respaldo con otras personas.</p>
+        `)}
+      </div>
+    `;
+  }
+
+  async function saveProfile(form) {
+    const displayName = String(new FormData(form).get("display_name") || "").trim();
+    if (!displayName) {
+      notice("Escribe un nombre visible antes de guardar.", true);
+      return;
+    }
+    try {
+      const metadata = { ...(user?.user_metadata || {}), display_name: displayName };
+      const { data, error } = await client.auth.updateUser({ data: metadata });
+      if (error) throw error;
+      if (data?.user) user = data.user;
+      syncSidebarIdentity();
+      notice("Perfil guardado correctamente.");
+      render();
+    } catch (err) {
+      notice("No se pudo guardar el perfil: " + (err.message || "Error desconocido."), true);
+    }
+  }
+
+  async function savePreferences(form) {
+    const formData = new FormData(form);
+    const nextPreferences = {
+      theme: formData.get("theme") === "light" ? "light" : "dark",
+      daily_goal: String(formData.get("daily_goal") || "30"),
+      study_tips: form.querySelector('[name="study_tips"]').checked
+    };
+    try {
+      const metadata = {
+        ...(user?.user_metadata || {}),
+        edunova_preferences: nextPreferences
+      };
+      const { data, error } = await client.auth.updateUser({ data: metadata });
+      if (error) throw error;
+      if (data?.user) user = data.user;
+      loadUserPreferences();
+      notice("Preferencias guardadas correctamente.");
+      render();
+    } catch (err) {
+      notice("No se pudieron guardar las preferencias: " + (err.message || "Error desconocido."), true);
+    }
+  }
+
+  function makeBackupPayload() {
+    const metadata = user?.user_metadata || {};
+    return {
+      app: "EduNova V5",
+      format_version: 1,
+      created_at: new Date().toISOString(),
+      account: { email: user?.email || "", display_name: currentDisplayName() },
+      preferences: metadata.edunova_preferences || { theme: userPreferences.theme, daily_goal: userPreferences.dailyGoal, study_tips: userPreferences.studyTips },
+      data: {
+        tasks, notes, schedule_items: schedule, grades, study_goals: studyGoals,
+        timetable_periods: timetablePeriods, timetable_entries: timetableEntries
+      }
+    };
+  }
+
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportUserData(kind = "data") {
+    if (!user) {
+      notice("Inicia sesión para descargar tus datos.", true);
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const payload = makeBackupPayload();
+    const prefix = kind === "backup" ? "edunova-copia-seguridad" : "edunova-mis-datos";
+    downloadJson(`${prefix}-${date}.json`, payload);
+    notice(kind === "backup" ? "Copia de seguridad descargada. Guárdala en un lugar privado." : "Exportación descargada correctamente.");
+  }
+
   function gradesPage(){const rows=grades.length?`<div class="list">${grades.map(g=>`<div class="row"><div class="row-main"><b>${esc(g.title)}</b><small>${esc(g.subject||"Curso sin especificar")}</small></div><span class="grade-value">${esc(g.score)} / ${esc(g.max_score||20)}</span><button class="small-button" data-delete-grade="${esc(g.id)}">×</button></div>`).join("")}</div>`:empty("Registra tus notas para llevar un seguimiento.");return `${panel("Registrar calificación","Usa la escala que corresponda a tu colegio",`<form id="grade-form"><div class="form-grid"><div class="full"><label for="grade-title">Evaluación</label><input id="grade-title" name="title" required maxlength="150" placeholder="Ej. Práctica de unidad 1"></div><div><label for="grade-subject">Curso</label><input id="grade-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="grade-score">Nota obtenida</label><input id="grade-score" name="score" type="number" min="0" step="0.1" required placeholder="Ej. 17"></div><div class="full"><label for="grade-max">Nota máxima</label><input id="grade-max" name="max_score" type="number" min="0.1" step="0.1" value="20" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar nota +</button></div></form>`)}${panel("Mis calificaciones",`${grades.length} calificación(es)`,rows)}`}
-  const info={dashboard:["¡Ohayoo :)!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],timetable:["Personalizar","mi horario","Configura tus períodos, horas y clases de lunes a viernes."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."],goals: ["Mis", "objetivos", "Define tus metas semanales y sigue tu progreso."]};
-  function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({   dashboard,   tasks: tasksPage,   notes: notesPage,   schedule: schedulePage,   timetable: timetablePage,   grades: gradesPage,   goals: studyGoalsPanel }[activePage] || dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
+  const info={dashboard:["¡Ohayoo :)!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],timetable:["Personalizar","mi horario","Configura tus períodos, horas y clases de lunes a viernes."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."],goals: ["Mis", "objetivos", "Define tus metas semanales y sigue tu progreso."],settings: ["Perfil y", "configuración", "Administra tu perfil, la apariencia y tus datos personales."]};
+  function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({   dashboard,   tasks: tasksPage,   notes: notesPage,   schedule: schedulePage,   timetable: timetablePage,   grades: gradesPage,   goals: studyGoalsPanel, settings: settingsPage }[activePage] || dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
    async function reload(msg) {   const loaded = await loadAll();    render();    if (msg && loaded) {     notice(msg);   } }
-  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return; const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }
+  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return;if(f.id==="profile-form"){e.preventDefault();await saveProfile(f);return}if(f.id==="preferences-form"){e.preventDefault();await savePreferences(f);return} const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }
 if (table === "grades") {
   values.score = Number(values.score);
   values.max_score = Number(values.max_score);
@@ -585,6 +766,21 @@ if (b.dataset.periodConfig !== undefined) {
   return;
 }
 
+  if (b.hasAttribute("data-export-data")) {
+    exportUserData("data");
+    return;
+  }
+
+  if (b.hasAttribute("data-export-backup")) {
+    exportUserData("backup");
+    return;
+  }
+
+  if (b.hasAttribute("data-settings-logout")) {
+    await signOut();
+    return;
+  }
+
   if (b.dataset.page || b.dataset.goto) {
     activePage = b.dataset.page || b.dataset.goto;
     $("#notice").classList.add("hidden");
@@ -647,7 +843,7 @@ if (b.dataset.periodConfig !== undefined) {
   }
 }
 
-  async function changeHandler(e){const el=e.target;if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
+  async function changeHandler(e){const el=e.target;if(el.id==="pref-theme"){applyTheme(el.value);return}if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
  async function init() {
   $("#tab-login").addEventListener("click", () => setMode("login"));
   $("#tab-signup").addEventListener("click", () => setMode("signup"));
