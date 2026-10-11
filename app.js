@@ -205,7 +205,7 @@ async function configureTimetablePeriod() {
     "¿Qué número de período deseas editar?",
     String(timetablePeriods[0].period_number)
   );
-  if (number === null) return;
+  if (number === undefined) {
 
   const period = timetablePeriods.find(
     p => Number(p.period_number) === Number(number)
