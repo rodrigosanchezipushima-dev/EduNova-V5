@@ -24,8 +24,9 @@ button:focus-visible {
 }
 .panel:hover {
   border-color: #3b4d70;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
-
 input, textarea, select {
   min-height: 44px;
 }
