@@ -475,6 +475,19 @@ async function clickHandler(e) {
     return;
   }
 
+if (b.hasAttribute("data-period-delete")) {
+  const number = prompt("¿Qué número de período deseas eliminar?");
+  if (number === null) return;
+
+  if (!/^\d+$/.test(number)) {
+    notice("Introduce un número de período válido.", true);
+    return;
+  }
+
+  await deleteTimetablePeriod(Number(number));
+  return;
+}
+
 
 
 if (b.dataset.periodAdd !== undefined) {
