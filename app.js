@@ -524,14 +524,35 @@ async function clickHandler(e) {
     return;
   }
 
+
 if (b.hasAttribute("data-period-delete")) {
-  const number = prompt("¿Qué número de período deseas eliminar?");
+  if (!timetablePeriods.length) {
+    notice("No hay períodos para eliminar.", true);
+    return;
+  }
+
+  const options = [...timetablePeriods]
+    .sort((a, b) => a.period_number - b.period_number)
+    .map(p =>
+      `${p.period_number}: ${String(p.start_time).slice(0, 5)} - ${String(p.end_time).slice(0, 5)}`
+    )
+    .join("\n");
+
+  const number = prompt(
+    `Escribe el número del período que deseas eliminar:\n\n${options}`
+  );
+
   if (number === null) return;
 
   if (!/^\d+$/.test(number)) {
     notice("Introduce un número de período válido.", true);
     return;
   }
+
+  await deleteTimetablePeriod(Number(number));
+  return;
+}
+
 
   await deleteTimetablePeriod(Number(number));
   return;
