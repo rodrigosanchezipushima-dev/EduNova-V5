@@ -433,7 +433,9 @@ function timetablePage() {
         <button class="secondary" data-period-config>
           Configurar horas
         </button>
-      `
+      `<button class="secondary" data-period-delete>
+       🗑️ Eliminar período
+        </button>
     )}
     ${cells}
   `;
