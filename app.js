@@ -249,6 +249,23 @@ if (duplicate) {
   notice("Otro período ya tiene ese horario.", true);
   return;
 }
+  
+const overlaps = timetablePeriods.some(p => {
+  if (Number(p.period_number) === Number(number)) {
+    return false;
+  }
+
+  const existingStart = String(p.start_time).slice(0, 5);
+  const existingEnd = String(p.end_time).slice(0, 5);
+
+  return start < existingEnd && end > existingStart;
+});
+
+if (overlaps) {
+  notice("Ese horario se cruza con otro período.", true);
+  return;
+}
+
   try {
     await update("timetable_periods", period.id, {
       start_time: start,
