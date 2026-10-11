@@ -560,6 +560,7 @@ try {
     err.message || "No se pudo comprobar la sesión. Inténtalo nuevamente.",
     true
   );
+  }
 }
 
  document.addEventListener("DOMContentLoaded", init);
