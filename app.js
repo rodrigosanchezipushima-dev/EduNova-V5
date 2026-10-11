@@ -424,8 +424,7 @@ function timetablePage() {
     { id: 2, name: "Martes" },
     { id: 3, name: "Miércoles" },
     { id: 4, name: "Jueves" },
-    { id: 5, name: "Viernes" },
-    { id: 6, name: "Sabado" }
+    { id: 5, name: "Viernes" }
   ];
 
   const periods = [...timetablePeriods].sort(
@@ -434,61 +433,83 @@ function timetablePage() {
 
   const entries = timetableEntries;
 
-  const cells = days.map(day => `
-    <section class="panel">
-      <h3>${day.name}</h3>
-      <div class="list">
-        ${periods.map(period => {
-          const entry = entries.find(e =>
-            Number(e.day_of_week) === day.id &&
-            Number(e.period_number) === Number(period.period_number)
-          );
+  const tableRows = periods.map(period => `
+    <tr>
+      <th scope="row" class="timetable-time">
+        <span>${esc(String(period.start_time).slice(0, 5))}</span>
+        <span class="timetable-time-divider">–</span>
+        <span>${esc(String(period.end_time).slice(0, 5))}</span>
+      </th>
+      ${days.map(day => {
+        const entry = entries.find(e =>
+          Number(e.day_of_week) === day.id &&
+          Number(e.period_number) === Number(period.period_number)
+        );
 
-          return `
-            <div class="row" style="border-left:5px solid ${esc(entry?.color || "#DCEBFF")}">
-              <div class="row-main">
-                <b>${esc(entry?.subject || (period.is_break ? "RECREO" : "Sin asignar"))}</b>
-                <small>
-                  ${esc(String(period.start_time).slice(0, 5))}
-                  – ${esc(String(period.end_time).slice(0, 5))}
-                </small>
-                ${entry?.teacher
-                  ? `<small>${esc(entry.teacher)}</small>`
-                  : ""}
-              </div>
-              <button class="small-button"
-                data-timetable-edit="${day.id}:${period.period_number}">
-                Editar
-              </button>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </section>
+        const subject = entry?.subject || (period.is_break ? "RECREO" : "Sin asignar");
+
+        return `
+          <td class="timetable-cell">
+            <button
+              class="timetable-class"
+              style="--class-accent:${esc(entry?.color || "var(--blue)")}"
+              data-timetable-edit="${day.id}:${period.period_number}"
+              aria-label="Editar ${esc(subject)} del ${day.name}"
+            >
+              <strong>${esc(subject)}</strong>
+              ${entry?.teacher ? `<small>${esc(entry.teacher)}</small>` : ""}
+              ${entry?.room ? `<small>Aula: ${esc(entry.room)}</small>` : ""}
+              <span class="timetable-edit-hint">Editar</span>
+            </button>
+          </td>
+        `;
+      }).join("")}
+    </tr>
   `).join("");
 
- 
-return `
+  return `
     ${panel(
       "Mi horario escolar",
       "Organiza tus clases de lunes a viernes",
       `
-        <p>Períodos configurados: ${periods.length}</p>
-        <button class="primary" data-period-add>
-          + Añadir período
-        </button>
-        <button class="secondary" data-period-config>
-          Configurar horas
-        </button>
-        <button class="secondary" data-period-delete>
-          🗑️ Eliminar período
-        </button>
+        <div class="timetable-toolbar">
+          <p>Períodos configurados: <strong>${periods.length}</strong></p>
+          <div class="timetable-actions">
+            <button class="primary" data-period-add>+ Añadir período</button>
+            <button class="secondary" data-period-config>Configurar horas</button>
+            <button class="secondary" data-period-delete>🗑️ Eliminar período</button>
+          </div>
+        </div>
       `
     )}
-    ${cells}
+    <section class="panel timetable-panel">
+      <div class="timetable-heading">
+        <span class="timetable-heading-decoration" aria-hidden="true">✦</span>
+        <h2>HORARIO</h2>
+        <p>Mi semana de clases</p>
+      </div>
+      ${periods.length ? `
+        <div class="timetable-scroll">
+          <table class="timetable-grid">
+            <thead>
+              <tr>
+                <th scope="col" class="timetable-hours-heading">Horas</th>
+                ${days.map(day => `<th scope="col">${day.name}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      ` : `
+        <div class="timetable-empty">
+          <p>Aún no tienes períodos configurados.</p>
+          <p>Añade un período para comenzar a organizar tus clases.</p>
+        </div>
+      `}
+      <p class="timetable-footnote">Selecciona una casilla para editar la asignatura.</p>
+    </section>
   `;
 }
-
 
   function gradesPage(){const rows=grades.length?`<div class="list">${grades.map(g=>`<div class="row"><div class="row-main"><b>${esc(g.title)}</b><small>${esc(g.subject||"Curso sin especificar")}</small></div><span class="grade-value">${esc(g.score)} / ${esc(g.max_score||20)}</span><button class="small-button" data-delete-grade="${esc(g.id)}">×</button></div>`).join("")}</div>`:empty("Registra tus notas para llevar un seguimiento.");return `${panel("Registrar calificación","Usa la escala que corresponda a tu colegio",`<form id="grade-form"><div class="form-grid"><div class="full"><label for="grade-title">Evaluación</label><input id="grade-title" name="title" required maxlength="150" placeholder="Ej. Práctica de unidad 1"></div><div><label for="grade-subject">Curso</label><input id="grade-subject" name="subject" maxlength="100" placeholder="Curso"></div><div><label for="grade-score">Nota obtenida</label><input id="grade-score" name="score" type="number" min="0" step="0.1" required placeholder="Ej. 17"></div><div class="full"><label for="grade-max">Nota máxima</label><input id="grade-max" name="max_score" type="number" min="0.1" step="0.1" value="20" required></div></div><div class="form-actions"><button class="primary" type="submit">Guardar nota +</button></div></form>`)}${panel("Mis calificaciones",`${grades.length} calificación(es)`,rows)}`}
   const info={dashboard:["¡Ohayoo :)!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],timetable:["Personalizar","mi horario","Configura tus períodos, horas y clases de lunes a viernes."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."],goals: ["Mis", "objetivos", "Define tus metas semanales y sigue tu progreso."]};
@@ -554,13 +575,7 @@ if (b.hasAttribute("data-period-delete")) {
 }
 
 
-  await deleteTimetablePeriod(Number(number));
-  return;
-}
-
-
-
-if (b.dataset.periodAdd !== undefined) {
+  if (b.dataset.periodAdd !== undefined) {
   await addTimetablePeriod();
   return;
 }
