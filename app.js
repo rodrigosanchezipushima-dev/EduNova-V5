@@ -166,7 +166,10 @@ const number = Array.from(
   { length: 20 },
   (_, i) => i + 1
 ).find(n => !usedNumbers.includes(n));
-
+if (number === undefined) {
+  notice("Ya alcanzaste el límite de 20 períodos.", true);
+  return;
+}
 
   const start = prompt("Hora de inicio (HH:MM):", "08:00");
   if (start === null) return;
