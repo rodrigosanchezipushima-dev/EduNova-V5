@@ -290,6 +290,7 @@ if (overlaps) {
   }
 }
 
+
 async function deleteTimetablePeriod(periodNumber) {
   const period = timetablePeriods.find(
     p => Number(p.period_number) === Number(periodNumber)
@@ -316,9 +317,14 @@ async function deleteTimetablePeriod(periodNumber) {
     }
 
     await remove("timetable_periods", period.id);
-    await reload("Período eliminado correctamente.");
+
+    await reload("Período y clases asociadas eliminados correctamente.");
   } catch (err) {
-    notice(err.message || "No se pudo eliminar el período.", true);
+    await reload();
+    notice(
+      err.message || "No se pudo completar la eliminación. Revisa el horario.",
+      true
+    );
   }
 }
 
