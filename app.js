@@ -184,7 +184,14 @@ if (number === undefined) {
     notice("Introduce horas válidas. La hora final debe ser posterior.", true);
     return;
   }
+const duplicate = timetablePeriods.some(
+  p => p.start_time === start && p.end_time === end
+);
 
+if (duplicate) {
+  notice("Ya existe un período con ese horario.", true);
+  return;
+}
   try {
     await insert("timetable_periods", {
       period_number: number,
