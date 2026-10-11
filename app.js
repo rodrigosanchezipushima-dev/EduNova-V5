@@ -400,7 +400,25 @@ function timetablePage() {
   const info={dashboard:["¡Ohayoo :)!","Vamos a avanzar." ,"Este es tu resumen de aprendizaje."],tasks:["Mis","tareas","Organiza tus pendientes y marca lo que termines."],notes:["Mis","apuntes","Guarda tus resúmenes y consulta tus notas."],schedule:["Mi","horario","Planifica clases y sesiones de estudio."],timetable:["Personalizar","mi horario","Configura tus períodos, horas y clases de lunes a viernes."],grades:["Mis","calificaciones","Registra tus resultados y observa tu avance."],goals: ["Mis", "objetivos", "Define tus metas semanales y sigue tu progreso."]};
   function render(){const p=info[activePage]||info.dashboard;$("#page-title").innerHTML=`${esc(p[0])} <span>${esc(p[1])}</span>`;$("#page-subtitle").textContent=p[2];$("#page-content").innerHTML=(   activePage === "goals"     ? studyGoalsPanel()     : ({   dashboard,   tasks: tasksPage,   notes: notesPage,   schedule: schedulePage,   timetable: timetablePage,   grades: gradesPage,   goals: studyGoalsPanel }[activePage] || dashboard)() );document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===activePage))}
    async function reload(msg) {   const loaded = await loadAll();    render();    if (msg && loaded) {     notice(msg);   } }
-  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return; const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }if(table==="tasks")values.completed=false;if(table==="grades"){values.score=Number(values.score);values.max_score=Number(values.max_score);if(values.score>values.max_score)throw Error("La nota obtenida no puede superar la nota máxima.")}if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
+  async function submitForm(e){const f=e.target;if(!(f instanceof HTMLFormElement))return; const tables = {   "task-form": "tasks",   "note-form": "notes",   "schedule-form": "schedule_items",   "grade-form": "grades",   "goal-form": "study_goals" }; const table = tables[f.id]; if (!table) return; e.preventDefault(); const values = Object.fromEntries(new FormData(f).entries()); try {   if (table === "study_goals") {     values.target = Number(values.target);     values.completed = 0;     const now = new Date();     const monday = new Date(now);     monday.setHours(0, 0, 0, 0);     monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);     values.week_start = monday.toISOString().slice(0, 10);   }
+if (table === "grades") {
+  values.score = Number(values.score);
+  values.max_score = Number(values.max_score);
+
+  if (
+    !Number.isFinite(values.score) ||
+    !Number.isFinite(values.max_score) ||
+    values.score < 0 ||
+    values.max_score <= 0
+  ) {
+    throw Error("Introduce una nota válida y una nota máxima mayor que cero.");
+  }
+
+  if (values.score > values.max_score) {
+    throw Error("La nota obtenida no puede superar la nota máxima.");
+  }
+}
+if(table==="schedule_items")values.starts_at=new Date(values.starts_at).toISOString();await insert(table,values);await reload("Guardado correctamente.")}catch(err){notice(err.message||"No se pudo guardar.",true)}}
 
 async function clickHandler(e) {
   const b = e.target.closest("button");
