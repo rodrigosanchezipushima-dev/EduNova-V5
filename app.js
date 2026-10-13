@@ -896,6 +896,81 @@ if (b.dataset.periodConfig !== undefined) {
 }
 
   async function changeHandler(e){const el=e.target;if(el.id==="pref-theme"){applyTheme(el.value);return}if(!el.matches("[data-complete]"))return;try{await update("tasks",el.dataset.complete,{completed:el.checked});await reload(el.checked?"Tarea completada.":"Tarea marcada como pendiente.")}catch(err){notice(err.message||"No se pudo actualizar.",true)}}
+ const aiHistory = [];
+  function addAIMessage(text, who="bot", pending=false) {
+    const box = $("#ai-messages");
+    const node = document.createElement("div");
+    node.className = `ai-message ${who === "user" ? "ai-user" : "ai-bot"}${pending ? " ai-pending" : ""}`;
+    node.textContent = text;
+    box.appendChild(node);
+    box.scrollTop = box.scrollHeight;
+    return node;
+  }
+
+  function setupAIAssistant() {
+    const open = $("#ai-open"), panel = $("#ai-assistant"), close = $("#ai-close"), form = $("#ai-form"), input = $("#ai-input"), send = $("#ai-send");
+    if (!open || !panel || !form) return;
+    const toggle = (show) => {
+      panel.hidden = !show;
+      open.setAttribute("aria-expanded", String(show));
+      if (show) input.focus();
+    };
+    open.addEventListener("click", () => toggle(panel.hidden));
+    close?.addEventListener("click", () => toggle(false));
+    document.querySelectorAll("[data-ai-prompt]").forEach(button => button.addEventListener("click", () => {
+      input.value = button.dataset.aiPrompt || "";
+      form.requestSubmit();
+    }));
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message || send.disabled) return;
+      if (!client || !user) {
+        addAIMessage("Inicia sesión en EduNova para que el asistente pueda trabajar con tus datos.");
+        return;
+      }
+      addAIMessage(message, "user");
+      aiHistory.push({ role: "user", content: message });
+      input.value = "";
+      send.disabled = true;
+      const pending = addAIMessage("Estoy revisando tu solicitud…", "bot", true);
+      try {
+        const { data, error } = await client.functions.invoke("edunova-assistant", {
+          body: { message, history: aiHistory.slice(-10, -1) }
+        });
+        if (error) {
+          let detail = error.message || "No se pudo conectar con el asistente.";
+          try { const body = await error.context?.json?.(); if (body?.error) detail = body.error; } catch (_) {}
+          throw new Error(detail);
+        }
+        if (!data || typeof data.reply !== "string") throw new Error("El backend devolvió una respuesta no válida.");
+        pending.remove();
+        addAIMessage(data.reply);
+        aiHistory.push({ role: "assistant", content: data.reply });
+        if (data.actionsPerformed) {
+          const wasLoaded = await loadAll();
+          if (wasLoaded) render();
+          notice("EduNova AI ejecutó una acción y actualizó tus datos.");
+        }
+      } catch (err) {
+        pending.remove();
+        const detail = String(err?.message || "Error desconocido.");
+        addAIMessage(detail.includes("OPENAI_API_KEY")
+          ? "El chat ya está integrado, pero falta configurar OPENAI_API_KEY como secreto de la función en Supabase. No la pegues en app.js ni en este chat."
+          : `No pude completar la solicitud. ${detail}`);
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  }
+
  async function init() {
   $("#tab-login").addEventListener("click", () => setMode("login"));
   $("#tab-signup").addEventListener("click", () => setMode("signup"));
@@ -909,6 +984,7 @@ if (b.dataset.periodConfig !== undefined) {
 
   $("#page-content").addEventListener("submit", submitForm);
   document.addEventListener("click", clickHandler);
+  setupAIAssistant();
   $("#page-content").addEventListener("change", async e => {
     if (e.target?.id === "backup-file-input") {
       const file = e.target.files?.[0];
