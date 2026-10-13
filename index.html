@@ -62,5 +62,16 @@
 </nav>
       <section class="workspace"><div class="workspace-top"><div><div class="eyebrow">TU CENTRO DE ESTUDIO</div><h1 id="page-title">¡Hola! <span>Vamos a avanzar.</span></h1><p id="page-subtitle" class="muted">Este es tu resumen de aprendizaje.</p></div><div id="today-label" class="date-chip"></div></div><div id="notice" class="notice hidden"></div><div id="page-content"></div></section>
     </section>
-  </main><footer><span>EDUNOVA V5</span><span>Organiza · Aprende · Avanza</span></footer>
+  </main>
+  <section id="ai-assistant" class="ai-assistant" aria-label="Asistente de IA" hidden>
+    <div class="ai-panel">
+      <header class="ai-header"><div class="ai-brand"><span class="ai-orb">✦</span><div><strong>EduNova AI</strong><small>Asistente de estudio</small></div></div><button id="ai-close" class="ai-close" type="button" aria-label="Cerrar asistente">×</button></header>
+      <div id="ai-messages" class="ai-messages" aria-live="polite"><div class="ai-message ai-bot">¡Hola! Puedo ayudarte con tus tareas, apuntes, horario, calificaciones y objetivos. También puedo registrar algunas acciones en tu cuenta cuando la conexión de IA esté configurada.</div></div>
+      <div class="ai-suggestions"><button type="button" data-ai-prompt="¿Qué tareas tengo pendientes?">Tareas pendientes</button><button type="button" data-ai-prompt="Resume mi progreso académico con mis datos disponibles.">Mi progreso</button></div>
+      <form id="ai-form" class="ai-form"><label class="sr-only" for="ai-input">Escribe un mensaje</label><textarea id="ai-input" rows="2" maxlength="2000" placeholder="Escribe qué necesitas…" required></textarea><button id="ai-send" type="submit" aria-label="Enviar mensaje">➤</button></form>
+      <p class="ai-footnote">Comprueba las acciones y fechas antes de continuar. La IA puede equivocarse.</p>
+    </div>
+  </section>
+  <button id="ai-open" class="ai-open" type="button" aria-controls="ai-assistant" aria-expanded="false"><span>✦</span> EduNova AI</button>
+  <footer><span>EDUNOVA V5</span><span>Organiza · Aprende · Avanza</span></footer>
 </body></html>
